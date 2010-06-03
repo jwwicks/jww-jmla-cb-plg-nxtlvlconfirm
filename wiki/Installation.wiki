@@ -24,11 +24,19 @@
 <li>Download and install the plugin via the CB Plugin Manager</li>
 <li>Add the appropriate fields via the CB Field Manager, one must be named nxtlvlactivation, the other is configurable in the next step</li>
 <li>Once the install completes successfully, click the Next Level Confirmation plugin link in the CB Plugin Manager list and configure/enable.</li>
-<li>Hack the com_profiler.php core file for CB.</li>
+<li>Hack the com_profiler.php core file for CB using the corehack files from svn as a guide.</li>
 </ol>
 </p>
 
 = Files and Descriptions =
+<p>
+<ul>
+<li>nxtlvlconfirm.xml - Next Level Confirmation CB plugin installation settings file</li>
+<li>nxtlvlconfirm.php - Next Level Confirmation CB plugin</li>
+<li>http://code.google.com/p/jww-jmla-cb-plg-nxtlvlconfirm/source/browse/trunk/corehack/comprofiler.php - CB Core hack example</li>
+<li>http://code.google.com/p/jww-jmla-cb-plg-nxtlvlconfirm/source/browse/trunk/corehack/nxtlvlMessages.txt - Example email settings for the Next Level Confirmation plugin</li>
+</ul>
+</p>
 
 = To install the CB plugin =
 <p>
@@ -36,6 +44,14 @@
 <li></li>
 </ol>
 </p>
+
+= To create the CB Fields =
+<p>
+<ol>
+<li></li>
+</ol>
+</p>
+
 = To configure the CB plugin =
 <p>
 <ol>
@@ -43,9 +59,11 @@
 </ol>
 </p>
 
-= To Hack the Core com_profiler =
+= To Hack the Core com_profiler.php =
 <p>
 <ol>
 <li></li>
 </ol>
 </p>
+
+= Test the Setup =
