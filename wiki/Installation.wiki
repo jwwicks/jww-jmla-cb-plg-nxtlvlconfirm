@@ -21,7 +21,10 @@
 </p>
 <p>The process to get this plugin up and running is:
 <ol>
-<li>Download and install the plugin via the CB</li>
+<li>Download and install the plugin via the CB Plugin Manager</li>
+<li>Add the appropriate fields via the CB Field Manager, one must be named nxtlvlactivation, the other is configurable in the next step</li>
+<li>Once the install completes successfully, click the Next Level Confirmation plugin link in the CB Plugin Manager list and configure/enable.</li>
+<li>Hack the com_profiler.php core file for CB.</li>
 </ol>
 </p>
 
