@@ -28,33 +28,7 @@ User able to view/download Valid Order content
 
 = Files and Descriptions =
 
-  # readme.txt - You are currently reading the Read Me File.  This file describes all the other files within this zip.
-  # ps_ipcommerce.php - Virtuemart Payment module for IPCommerce/Paymentech.
-  # ps_ipcommerce.cfg.php - Configuration file for Virtuemart Payment module for IPCommerce/Paymentech.
-  # english.php - English messages for Virtuemart Payment module for IPCommerce/Paymentech.
+= To install the CB plugin =
 
-= To install the payment module =
-<ol>
-<li>Copy the ps_ipcommerce.php and ps_ipcommerce.cfg.php files to the "wwwroot"\administrator\components\com_virtuemart\classes\payment directory. wwwroot is the root directory for your Joomla Website.</li>
-<li>Locate and Backup the following file "wwwroot"\administrator\components\com_virtuemart\languages\common\english.php</li>
-<li>Edit the "wwwroot"\administrator\components\com_virtuemart\languages\common\english.php. Locate the line with the following text near line 1331:<br /> 
-); $VM_LANG->initModule( 'common', $langvars );<br />
-Add a blank line before this line. Add a comma. Then copy the strings in this payment module's english.php to the end of that file after the comma but before the "); $VM_LANG->initModule( 'common', $langvars );" line.</li>
-<li>Log into the VirtueMart admin area and create a new Payment Method.
-<ol>
-<li> Store, List Payment Methods, New</li>
-<li>The Payment Method Form is displayed. In the Payment Method Name field type IPCommerce</li>
-<li>In the Code field type IPCOM</li>
-<li>Select the "ps_ipcommerce" module in the Payment class name drop-down list.</li>
-<li>Select the radio-button labeled "Use Payment Processor" for the "Payment method type"</li>
-<li>Save</li>
-</ol>
-</li>
-<li>Gather all the configuration information from your IPCommerce representative. IP's URL's MerchantID etc...</li>
-<li>This new Payment Method should appear in the List of Payment Methods in the Virtuemart Store administration area.</li>
-<li>Select the IPCommerce payment method and then the Configuration tab.</li>
-<li>Enter the approriate data in the fields provided. Add the PTLSSocketId as your Virtuemart Transaction key.</li>
-</ol>
-
-= What's Next - Testing/Certification =
+= What's Next - Hack the core =
 <p></p>
