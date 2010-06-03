@@ -24,7 +24,7 @@
 <li>Download and install the plugin via the CB Plugin Manager</li>
 <li>Add the appropriate fields via the CB Field Manager, one must be named nxtlvlactivation, the other is configurable in the next step</li>
 <li>Once the install completes successfully, click the Next Level Confirmation plugin link in the CB Plugin Manager list and configure/enable.</li>
-<li>Hack the com_profiler.php core file for CB using the corehack files from svn as a guide.</li>
+<li>Hack the comprofiler.php core file for CB using the corehack files from svn as a guide.</li>
 </ol>
 </p>
 
@@ -113,10 +113,19 @@
 </p>
 
 = To Hack the Core com_profiler.php =
+<p>Next we have to hack a core file for CB. Backup Backup Backup. Oh yeah Backup.
+<ol>
+<li>Copy the CB core comprofiler.php and store it as a backup.</li>
+<li>Locate and download the comprofiler.php from this projects svn</li>
+<li>Open a copy of the core comprofiler.php file and add the sections from this projects comprofiler.php that exist between comment blocks /* NxtLvl Mod */. There are two sections of code to add.</li>
+<li>Save/Upload the modified comprofiler.php file to your site.</li>
+<li>Test</li>
+</ol>
+</p>
+
+= Test the Confirmation Process =
 <p>
 <ol>
 <li></li>
 </ol>
 </p>
-
-= Test the Setup =
