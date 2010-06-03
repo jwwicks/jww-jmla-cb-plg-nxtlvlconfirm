@@ -112,7 +112,7 @@
 </ol>
 </p>
 
-= To Hack the Core com_profiler.php =
+= To Hack the Core comprofiler.php =
 <p>Next we have to hack a core file for CB. Backup Backup Backup. Oh yeah Backup.
 <ol>
 <li>Copy the CB core comprofiler.php in siteroot/components/com_profiler and store it as a backup.</li>
