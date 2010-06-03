@@ -56,6 +56,7 @@
  <li>Type - Text Field</li>
  <li>Tab - Contact Info</li>
  <li>Name - bookorderid (Note CB will automatically prepend cb_ to the name)</li>
+ <li>Title - Book Order ID</li>
  <li>Description - This is the Order ID on your invoice</li>
  <li>Required - No</li>
  <li>Show on Profile - Yes: on 1 line</li>
@@ -69,6 +70,24 @@
  <li>Authorized Input - Custom Perl regular expression</li>
  <li>Regular Expression - /^[0-9A-z-]{8,35}$/</li>
  <li>Error message - The Order ID does not appear to be valid. Should be a single set of characters and numbers at least 8 digits in length.</li>
+</ul>
+</li>
+<li>Save the new Field</li>
+<li>Click the New Field button again</li>
+<li>I use the following as an example for the field settings:
+<ul>
+ <li>Type - Text Field</li>
+ <li>Tab - Contact Info</li>
+ <li>Name - nxtlvlactivation (Note CB will automatically prepend cb_ to the name)</li>
+ <li>Title - Next Level Activation Code</li>
+ <li>Required - No</li>
+ <li>Show on Profile - No</li>
+ <li>Display Field Title - No</li>
+ <li>Searchable - No</li>
+ <li>Read Only - No</li>
+ <li>Show at Registration - No</li>
+ <li>Published - Yes</li>
+ <li>Size - 50</li>
 </ul>
 </li>
 </ol>
