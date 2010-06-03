@@ -39,16 +39,38 @@
 </p>
 
 = To install the CB plugin =
-<p>
+<p>To install the Next Level Confirmation plugin in Community Builder do the following:
 <ol>
-<li></li>
+<li>Download the latest plugin from the [http://code.google.com/p/jww-jmla-cb-plg-nxtlvlconfirm/downloads/list downloads page] of this project.</li>
+<li>Login to the Joomla Administration area for your site and access the Plugin Manager for Community Builder. Click the Install Plugin link, click Browse and select the archive for plugin then click Upload File & Install.</li>
 </ol>
 </p>
 
 = To create the CB Fields =
-<p>
+<p>Next you'll need to create a couple of extra fields to use during the confirmation process:
 <ol>
-<li></li>
+<li>Go to the CB Field Manager.</li>
+<li>Click the New Field button</li>
+<li>I use the following as an example for the field settings:
+<ul>
+ <li>Type - Text Field</li>
+ <li>Tab - Contact Info</li>
+ <li>Name - bookorderid (Note CB will automatically prepend cb_ to the name)</li>
+ <li>Description - This is the Order ID on your invoice</li>
+ <li>Required - No</li>
+ <li>Show on Profile - Yes: on 1 line</li>
+ <li>Display Field Title - Yes</li>
+ <li>Searchable - No</li>
+ <li>Read Only - No</li>
+ <li>Show at Registration - Yes</li>
+ <li>Published - Yes</li>
+ <li>Size - 25</li>
+ <li>Max - 40</li>
+ <li>Authorized Input - Custom Perl regular expression</li>
+ <li>Regular Expression - /^[0-9A-z-]{8,35}$/</li>
+ <li>Error message - The Order ID does not appear to be valid. Should be a single set of characters and numbers at least 8 digits in length.</li>
+</ul>
+</li>
 </ol>
 </p>
 
