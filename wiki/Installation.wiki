@@ -90,13 +90,25 @@
  <li>Size - 50</li>
 </ul>
 </li>
+<li>Save the new Field</li>
 </ol>
 </p>
 
 = To configure the CB plugin =
-<p>
+<p>Next we'll need to configure the settings for the plugin to match the fields we created:
 <ol>
-<li></li>
+<li>Goto the CB Plugin Manager</li>
+<li>Click the Next Level Confirmation plugin link</li>
+<li>I use the following as an example for the field settings:
+<ul>
+ <li>NxtLevel Confirmation Enabled - Yes</li>
+ <li>NxtLevel Field Name - cb_bookorderid</li>
+ <li>NxtLevel Group Name - Author (19)</li>
+ <li>Email From Id - Super Administrator (62)</li>
+ <li>Email To Id - Super Administrator (62)</li>
+ <li>All the rest can be left with the defaults. Just be aware if you modify these that the field placeholders need to be there.</li>
+</ul>
+</li>
 </ol>
 </p>
 
