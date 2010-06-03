@@ -1,0 +1,48 @@
+﻿------------------
+[SITENAME] - Workbook Owner Verification
+User:     [NAME]
+Email:    [EMAIL]
+Order Id: [NXTLVLFIELD]
+
+Confirm this Order Id by clicking the following link: [NXTLVLCONFIRM]
+
+Request a correction by clicking the following link: [NXTLVLDENY]
+
+-------------------
+[SITENAME] - Workbook Owner Access Activation
+Hello [NAME],
+ 
+Thank you for your recent attempt to register your Network Migration Workbook.
+ 
+We have verified your Order ID, [NXTLVLFIELD], and upgraded your access accordingly. 
+ 
+Please feel free to logon and access the Members area from the Home Page. You can download members only content in the files area.
+ 
+Thank you,
+[SITENAME] Team
+
+-------------------
+[SITENAME] - Order ID Correction Request
+Hello [NAME],
+
+Thank you for your recent attempt to register on [SITENAME].
+
+However, [NXTLVLFIELD], is not valid for registration. Please, provide us with a valid Order ID. 
+For registration on the [SITENAME] you need the ID of the Network Migration Workbook Order.
+
+This ID is located in the Purchase Receipt Email you received after you purchased the book.  It consists of 9 digits.
+If you ordered through Amazon the ID will be slightly different.
+
+Please logon to the Website and enter the correct Order ID by editing your User Profile:
+
+Once logged in click the "User Profile" in the top menu. 
+Then on the "Edit" tab click the "Update Your Profile" item.
+Towards the bottom you'll see "Network Migration Workbook Order ID:", enter the new Order ID here.
+
+Once you enter in the new ID we will verify it within 72 hours.
+
+If you can't find the receipt and need assistance, please contact Lana : lanas@greatlittlebook.com. 
+
+Thank you,
+[SITENAME] Team
+

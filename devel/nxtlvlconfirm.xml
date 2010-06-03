@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+* Joomla Community Builder User Plugin: plug_nextlvlconfirm
+* @version $Id$
+* @package plug_nxtlvlconfirm
+* @subpackage nxtlvlconfirm.xml
+* @author John Wicks (Gh0st)
+* @copyright (C) (Gh0st), GreatLittleBook Publishing Co., Inc
+* @license Limited http://www.gnu.org/copyleft/gpl.html GNU/GPL
+* @final 1.0
+*/
+-->
+<cbinstall version="1.0.3" type="plugin" group="user">
+	<name>Next Level Confirmation</name>
+	<author>John W</author>
+	<creationDate>2009-09-11</creationDate>
+	<copyright>(C) 2009 Great Little Book Publishing Co., Inc.</copyright>
+	<license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+	<authorEmail>johnw@greatlittlebook.com</authorEmail>
+	<authorUrl>www.greatlittlebook.com</authorUrl>
+	<version>1.0</version>
+	<description>
+		This plugin is used to confirm a user via a User defined field value.
+		It sends a second level confirmation message to a specified recipient.
+		Generates link confirmation similar to registration function and upgrades Access level to specified group.
+	</description>
+	<files>
+		<filename plugin="nxtlvlconfirm">nxtlvlconfirm.php</filename>
+		<filename>index.html</filename>
+	</files>
+	<params>
+		<param name="@spacer" type="spacer" label="Credits:" default="This plugin was created by John Wicks for Great Little Book Publishing Co., Inc." description="" />
+		<param name="nxtlvlPlugEnabled" type="radio" label="NxtLevel Confirmation Enabled" default="1" description="Specify Yes to enable Next Level Confirmation plugin.">
+			<option value="0">No</option>
+			<option value="1">Yes</option>
+		</param>
+		<param name="@spacer" type="spacer" label="" default="" description="" />
+		<param name="nxtlvlWatchFieldId" 
+			type="text" 
+			default="email" 
+			label="NxtLevel Field Name" 
+			description="Secondary confirmation field to watch - (default email)"/>
+		<param name="nxtlvlOnConfirmedGroup" 
+			type="text" 
+			default="Author" 
+			label="NxtLevel Group Name" 
+			description="Group Access Level to set after successful Next Level Confirmation - (default Author)"/>
+		<param name="@spacer" type="spacer" label="" default="" description="" />
+		<param name="nxtlvlEmailFromUserId" 
+			type="text" 
+			default="0" 
+			label="Email From Id" 
+			description="The userid of the sender - message From (default 0 for system message)"/>
+		<param name="nxtlvlEmailToUserId" 
+			type="text" 
+			default="62" 
+			label="Email To Id" 
+			description="The userid of the recipient - message To (default 62 for admin)"/>
+		<param name="@spacer" type="spacer" label="" default="" description="" />
+		<param name="nxtlvlOnCheckSubject" 
+			type="text" 
+			default="[SITENAME] - Next Level Verification" 
+			label="NxtLevel Verification Subject" 
+			description="Message subject to use in next level verification email. Community Builder [FIELDNAMES] allowed."/>
+		<param name="nxtlvlOnCheckBody" 
+			type="textarea" 
+			cols="30" 
+			rows="5" 
+			default="Name : [NAME][BR][BR]Email : [EMAIL][BR][BR]WatchField: [NXTLVLFIELD][BR][BR]Confirm: [NXTLVLCONFIRM][BR]Deny: [NXTLVLDENY][BR]" 
+			label="NxtLevel Verification Body" 
+			description="Body of next level verification email message. Community Builder [FIELDNAMES] allowed."/>
+		<param	name="@spacer" type="spacer" label="" default="" description="" />
+		<param name="nxtlvlOnConfirmedSubject" 
+			type="text" 
+			default="[SITENAME] - Next Level Confirmed" 
+			label="NxtLevel Confirmed Subject" 
+			description="Message subject to use in next level confirmed email. Community Builder [FIELDNAMES] allowed."/>
+		<param name="nxtlvlOnConfirmedBody" 
+			type="textarea" 
+			cols="30" 
+			rows="5" 
+			default="[NAME],[EMAIL] [NXTLVLFIELD]" 
+			label="NxtLevel Confirmed Body" 
+			description="Body of next level confirmed email message. Community Builder [FIELDNAMES] allowed."/>
+		<param	name="@spacer" type="spacer" label="" default="" description="" />
+		<param name="nxtlvlOnFailedSubject" 
+			type="text" 
+			default="[SITENAME] - Next Level Failure" 
+			label="NxtLevel Failure Subject" 
+			description="Message subject to use in next level failure email. Community Builder [FIELDNAMES] allowed."/>
+		<param name="nxtlvlOnFailedBody" 
+			type="textarea" 
+			cols="30" 
+			rows="5" 
+			default="[NAME],[EMAIL] [NXTLVLFIELD]" 
+			label="NxtLevel Failure Body" 
+			description="Body of next level failure email message. Community Builder [FIELDNAMES] allowed."/>
+	</params>
+	<tabs>
+	</tabs>
+	<install>
+		<queries>
+		</queries>
+	</install>
+	<uninstall>
+	</uninstall>
+</cbinstall>
