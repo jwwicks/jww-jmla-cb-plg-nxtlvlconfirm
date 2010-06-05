@@ -16,6 +16,7 @@ if ( ! ( defined( '_VALID_CB' ) || defined( '_JEXEC' ) || defined( '_VALID_MOS' 
 global $_PLUGINS;
 $_PLUGINS->registerFunction('onUserActive', 'nxtlvlOnUserActive', 'plug_nxtlvlconfirm');
 $_PLUGINS->registerFunction('onBeforeUserActive', 'nxtlvlOnBeforeUserActive', 'plug_nxtlvlconfirm');
+$_PLUGINS->registerFunction('onBeforeUserUpdate', 'nxtlvlBeforeUserUpdate', 'plug_nxtlvlconfirm');
 
 /**
  * NextLevel Confirmation Class.
@@ -127,6 +128,14 @@ class plug_nxtlvlconfirm extends cbTabHandler {
 			}
 		}
 		return $ret_val;
+	} // end function
+
+   /**
+	* 
+	* @param 
+	* @returns 
+	*/
+	function nxtlvlBeforeUserUpdate(&$row, &$rowExtras) {
 	} // end function
 	
 	/**
