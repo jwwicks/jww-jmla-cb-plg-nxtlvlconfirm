@@ -1,7 +1,7 @@
 <?php
 /**
 * Joomla/Mambo Community Builder
-* @version $Id: comprofiler.php 609 2006-12-13 17:30:15Z beat $
+* @version $Id: comprofiler.php 884 2010-02-20 11:39:34Z beat $
 * @package Community Builder
 * @subpackage comprofiler.php
 * @author JoomlaJoe and Beat
@@ -142,18 +142,18 @@ switch( $task ) {
 	confirm( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
 	break;
 
-/* NxtLvl Mod */
-	case "nxtlvlconfirm":
-	$oldignoreuserabort = ignore_user_abort(true);
-	nxtlvlconfirm( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
-	break;
-	
-	case "nxtlvldeny":
-	$oldignoreuserabort = ignore_user_abort(true);
-	nxtlvldeny( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
-	break;
-/* End NxtLvl Mod */
-		
+	/* NxtLvl Mod */ 
+	 case "nxtlvlconfirm": 
+	 $oldignoreuserabort = ignore_user_abort(true); 
+	 nxtlvlconfirm( cbGetParam( $_GET, 'confirmcode', '1' ) ); // mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam... 
+	 break; 
+	  
+	 case "nxtlvldeny": 
+	 $oldignoreuserabort = ignore_user_abort(true); 
+	 nxtlvldeny( cbGetParam( $_GET, 'confirmcode', '1' ) ); // mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam... 
+	 break; 
+	 /* End NxtLvl Mod */ 
+ 
 	case "moderateImages":
 	case "moderateimages":
 	$oldignoreuserabort = ignore_user_abort(true);
@@ -391,6 +391,10 @@ function emailUser($option,$uid) {
 
 function userEdit( $option, $uid, $submitvalue, $regErrorMSG = null ) {
 	global $_CB_framework, $_POST, $_PLUGINS;
+
+	if ( $uid == 0 ) {
+		$uid				=	$_CB_framework->myId();
+	}
 
 	$msg						=	cbCheckIfUserCanPerformUserTask( $uid, 'allowModeratorsUserEdit');
 	if ( ( $uid != $_CB_framework->myId() ) && ( $msg === null ) ) {
@@ -892,7 +896,19 @@ function usersList( $uid ) {
 
 	// build SQL Select query:
 
+	$random					=	0;
 	if( $row->sortfields != '' ) {
+		$matches			=	null;
+		if ( preg_match( '/^RAND\(\)\s(ASC|DESC)$/', $row->sortfields, $matches ) ) {
+			// random sorting needs to have same seed on pages > 1 to not have probability to show same users:
+			if ( $limitstart ) {
+				$random		=	(int) cbGetParam( $_GET, 'rand', 0 );
+			}
+			if ( ! $random ) {
+				$random		=	rand( 0, 32767 );
+			}
+			$row->sortfields =	'RAND(' . (int) $random . ') ' . $matches[1];
+		}
 		$orderby			=	"\n ORDER BY " . $row->sortfields;
 	}
 	$filterby				=	'';
@@ -1073,7 +1089,7 @@ function usersList( $uid ) {
 		$option_itemid		=	getCBprofileItemid( 0 );
 	}
 
-	HTML_comprofiler::usersList( $row, $users, $columns, $allFields, $lists, $listid, $search, $searchmode, $option_itemid, $limitstart, $limit, $total, $myUser, $searchableFields, $searchVals, $tabs, $list_compare_types, $showPaging, $hotlink_protection, $errorMsg );
+	HTML_comprofiler::usersList( $row, $users, $columns, $allFields, $lists, $listid, $search, $searchmode, $option_itemid, $limitstart, $limit, $total, $myUser, $searchableFields, $searchVals, $tabs, $list_compare_types, $showPaging, $hotlink_protection, $errorMsg, $random );
 }
 /**
  * Creates the column references for the userlist query
@@ -1213,7 +1229,7 @@ function sendNewPass( $option ) {
 			cbRedirect( cbSef( 'index.php?option=' . $option . '&amp;task=lostPassword' . ( $Itemid ? '&amp;Itemid=' . (int) $Itemid : '' ), false ), _ERROR_PASS );
 		}
 	
-		$newpass = cbMakeRandomString( 8, true );
+		$newpass = cbMakeRandomString( 8, true );		// should be $user->setRandomPassword() but as this whole function needs to be redone to require clicking link for new password change, let's leave it for now.
 		$message = str_replace( '\n', "\n", sprintf( _UE_NEWPASS_MSG, $checkusername, $_live_site, $newpass ) );
 		$subject = sprintf( _UE_NEWPASS_SUB, $checkusername );
 	
@@ -1229,8 +1245,10 @@ function sendNewPass( $option ) {
 		if ($res) {
 			$_PLUGINS->trigger( 'onNewPassword', array($user_id,$newpass));
 
-			$newpass	=	cbHashPassword( $newpass );
-			$sql		=	"UPDATE #__users SET password = '" . $_CB_database->getEscaped( $newpass ) . "' WHERE id = " . (int) $user_id;
+			$cbUser		=	CBuser::getInstance( (int) $user_id );
+			$user		=	$cbUser->getUserData();
+			$newpass	=	$user->hashAndSaltPassword( $newpass );
+			$sql		=	"UPDATE #__users SET password = " . $_CB_database->Quote( $newpass ) . " WHERE id = " . (int) $user_id;
 			$_CB_database->setQuery( $sql );
 			if (!$_CB_database->query()) {
 				die("SQL error" . $_CB_database->stderr(true));
@@ -1318,8 +1336,7 @@ function saveRegistration( $option ) {
 	$usernameExists						=	$userComplete->loadByUsername( $username );
 	if ( $usernameExists ) {
 		$password						=	cbGetParam( $_POST, 'password', '', _CB_ALLOWRAW );
-		$passwordMatches				=	cbHashPassword( $password, $userComplete );
-		if ( $passwordMatches ) {
+		if ( $userComplete->verifyPassword( $password ) ) {
 			$pwd_md5					=	$userComplete->password;
 			$userComplete->password		=	$password;
 			$messagesToUser				=	activateUser( $userComplete, 1, 'SameUserRegistrationAgain' );
@@ -1346,7 +1363,7 @@ function saveRegistration( $option ) {
 
 	if($ueConfig['reg_enable_toc']) {
 		if ( $userComplete->acceptedterms != 1 ) {
-			echo "<script type=\"text/javascript\">alert('" . addslashes( unHtmlspecialchars( _UE_TOC_REQUIRED ) ) ."'); </script>\n";
+			echo "<script type=\"text/javascript\">alert('" . addslashes( cbUnHtmlspecialchars( _UE_TOC_REQUIRED ) ) ."'); </script>\n";
 			$oldUserComplete				=	new moscomprofilerUser( $_CB_database );
 			$userComplete->bindSafely( $_POST, $_CB_framework->getUi(), 'register', $oldUserComplete );
 			HTML_comprofiler::registerForm( $option, $ueConfig['emailpass'], $userComplete, $_POST, _UE_TOC_REQUIRED . '<br />' );
@@ -1524,7 +1541,7 @@ function performCheckEmail( $email, $function ) {
 
 
 function login( $username=null, $passwd2=null ) {
-    global $_CB_database, $_GET, $_POST, $_CB_framework, $ueConfig, $_PLUGINS;
+    global $_POST, $_CB_framework, $ueConfig;
 
     if ( count( $_POST ) == 0 ) {
     	HTML_comprofiler::loginForm( 'com_comprofiler', $_POST, null );
@@ -1549,7 +1566,7 @@ function login( $username=null, $passwd2=null ) {
     }
 
 	$messagesToUser		=	array();
-    $resultError		=	null;
+	$alertmessages		=	array();
 
     if ( !$username || !$passwd2 ) {
 		$username		=	trim( cbGetParam( $_POST, 'username', '' ) );
@@ -1566,161 +1583,14 @@ function login( $username=null, $passwd2=null ) {
 		$return			=	'';
 	}
 	$message			=	trim( cbGetParam( $_POST, 'message', 0 ) );
-	//print "message:".$message;
-    // $remember = trim( cbGetParam( $_POST, 'remember', '' ) );
-	// $lang = trim( cbGetParam( $_POST, 'lang', '' ) );
 
-	if ( !$username || !$passwd2 ) {
-		$resultError					=	_LOGIN_INCOMPLETE;
-	} else {
-		$_PLUGINS->loadPluginGroup('user');
-		$_PLUGINS->trigger( 'onBeforeLogin', array( &$username, &$passwd2 ) );
-		
-		$alertmessages					=	array();
-		$showSysMessage					=	true;
-		$stopLogin						=	false;
-		$loggedIn						=	false;
-		$returnURL						=	null;
-		
-		if($_PLUGINS->is_errors()) {
-			$resultError				=	$_PLUGINS->getErrorMSG();
-		} else {
-			/*
-			$_CB_database->setQuery( "SELECT * "
-			. "\n FROM #__users u, "
-			. "\n #__comprofiler ue "
-			. "\n WHERE u.username='".$username."' AND u.id = ue.id"
-			);
-			$row = null;
-			if ( $_CB_database->loadObject( $row ) && cbHashPassword( $passwd2, $row ) ) {
-			*/
-			$loginType					=	( isset( $ueConfig['login_type'] ) ? $ueConfig['login_type'] : 0 );
-			// NEXT 3 LINES: CB 1.2 RC 2 + CB 1.2 specific : remove after !
-			if ( ! defined( '_UE_INCORRECT_EMAIL_OR_PASSWORD' ) ) {
-				DEFINE('_UE_INCORRECT_EMAIL_OR_PASSWORD','Incorrect email or password. Please try again.');
-			}
-			$row						=	new moscomprofilerUser( $_CB_database );
-			$foundUser					=	false;
+	$loginType			=	( isset( $ueConfig['login_type'] ) ? $ueConfig['login_type'] : 0 );
+	
+	// Do the login including all authentications and event firing:
+	cbimport( 'cb.authentication' );
+	$cbAuthenticate		=	new CBAuthentication();
+	$resultError		=	$cbAuthenticate->login( $username, $passwd2, $rememberMe, $message, $return, $messagesToUser, $alertmessages, $loginType );
 
-			// Try login by CB authentication trigger:
-			$_PLUGINS->trigger( 'onLoginAuthentication', array( &$username, &$passwd2, &$row, $loginType, &$foundUser, &$stopLogin, &$resultError, &$messagesToUser, &$alertmessages, &$return ) );
-
-			if ( ! $foundUser ) {
-				if ( $loginType != 2 ) {
-					// login by username:
-					$foundUser			=	$row->loadByUsername( stripslashes( $username ) ) && cbHashPassword( $passwd2, $row );
-				}
-				if ( ( ! $foundUser ) && ( $loginType >= 1 ) ) {
-					// login by email:
-					$foundUser			=	$row->loadByEmail( stripslashes( $username ) ) && cbHashPassword( $passwd2, $row );
-					if ( $foundUser ) {
-						$username		=	$row->username;
-					}
-				}
-				if ( ( ! $foundUser ) && ( $loginType > 2 ) ) {
-					// If no result, try login by CMS authentication:
-					if ( $_CB_framework->login( $username, $passwd2, $rememberMe ) ) {
-						$foundUser		=	$row->loadByUsername( stripslashes( $username ) );
-						cbSplitSingleName( $row );
-						$row->confirmed	=	1;
-						$row->approved	=	1;
-						$row->store();		// synchronizes with comprofiler table
-						$loggedIn		=	true;
-					}
-				}
-			}
-			if ( $foundUser ) {
-				$pluginResults = $_PLUGINS->trigger( 'onDuringLogin', array( &$row, 1, &$return ) );
-				if ( is_array( $pluginResults ) && count( $pluginResults ) ) {
-					foreach ( $pluginResults as $res ) {
-						if ( is_array( $res ) ) {
-							if ( isset( $res['messagesToUser'] ) ) {
-								$messagesToUser[]	= $res['messagesToUser'];
-							}
-							if ( isset( $res['alertMessage'] ) ) {
-								$alertmessages[]	= $res['alertMessage'];
-							}
-							if ( isset( $res['showSysMessage'] ) ) {
-								$showSysMessage		= $showSysMessage && $res['showSysMessage'];
-							}
-							if ( isset( $res['stopLogin'] ) ) {
-								$stopLogin			= $stopLogin || $res['stopLogin'];
-							}
-						}
-					}
-				}
-				if($_PLUGINS->is_errors()) {
-					$resultError = $_PLUGINS->getErrorMSG();
-				}
-				elseif ( $stopLogin ) {
-					// login stopped: don't even check for errors...
-				}
-				elseif ($row->approved == 2){
-					$resultError = _LOGIN_REJECTED;
-				}
-				elseif ($row->confirmed != 1){
-					if ( $row->cbactivation == '' ) {
-						$row->store();		// just in case the activation code was missing
-					}
-					$cbNotification = new cbNotification();
-					$cbNotification->sendFromSystem($row->id,getLangDefinition(stripslashes($ueConfig['reg_pend_appr_sub'])),getLangDefinition(stripslashes($ueConfig['reg_pend_appr_msg'])));
-					$resultError = _LOGIN_NOT_CONFIRMED;
-				}
-				elseif ($row->approved == 0){
-					$resultError = _LOGIN_NOT_APPROVED;
-				}
-				elseif ($row->block == 1) {
-					$resultError = _UE_LOGIN_BLOCKED;
-				}
-				elseif ($row->lastvisitDate == '0000-00-00 00:00:00') {
-					if (isset($ueConfig['reg_first_visit_url']) and ($ueConfig['reg_first_visit_url'] != "")) {
-						$return		=	$ueConfig['reg_first_visit_url'];
-					} else {
-						$return		=	null;	// by default return to homepage on first login.
-					}
-					$_PLUGINS->trigger( 'onBeforeFirstLogin', array( &$row, $username, $passwd2, &$return ));
-					if ($_PLUGINS->is_errors()) {
-						$resultError = $_PLUGINS->getErrorMSG( "<br />" );
-					}
-				}
-			} else {
-				if ( $loginType < 2 ) {
-					$resultError	=	_LOGIN_INCORRECT;
-				} else {
-					$resultError	=	_UE_INCORRECT_EMAIL_OR_PASSWORD;
-				}
-			}
-		}
-
-		if ( $resultError ) {
-			if ( $showSysMessage ) {
-				$alertmessages[] = $resultError;
-			}
-		} elseif ( ! $stopLogin ) {
-			if ( ! $loggedIn ) {
-				$_PLUGINS->trigger( 'onDoLoginNow', array( $username, $passwd2, $rememberMe, &$row, &$loggedIn, &$resultError, &$messagesToUser, &$alertmessages, &$return ) );
-			}
-			if ( ! $loggedIn ) {
-				$_CB_framework->login( $username, $passwd2, $rememberMe );
-				$loggedIn		=	true;
-			}
-			$_PLUGINS->trigger( 'onAfterLogin', array( &$row, $loggedIn ) );
-			if ( $loggedIn && $message && $showSysMessage ) {
-				$alertmessages[] = _LOGIN_SUCCESS;
-			}
-			if ( ! $loggedIn ) {
-				$resultError	=	_LOGIN_INCORRECT;
-			}
-			// changing com_comprofiler to comprofiler is a quick-fix for SEF ON on return path...
-			if ( $return && !( strpos( $return, 'comprofiler' /* 'com_comprofiler' */ ) && ( strpos( $return, 'login') || strpos( $return, 'logout') || strpos( $return, 'registers' ) || strpos( strtolower( $return ), 'lostpassword' ) ) ) ) {
-			// checks for the presence of a return url
-			// and ensures that this url is not the registration or login pages
-				$returnURL = cbSef( $return, false );
-			} elseif ( ! $returnURL ) {
-				$returnURL = cbSef( 'index.php', false );
-			}
-		}
-	}
 	if ( count( $messagesToUser ) > 0 ) {
 		if ( $resultError ) {
 			echo "<div class=\"message\">".$resultError."</div>";
@@ -1736,7 +1606,7 @@ function login( $username=null, $passwd2=null ) {
 			echo "<div class=\"message\">".$resultError."</div>";
 		}
 	} else {
-		cbRedirect( $returnURL, ( count( $alertmessages ) > 0 ? stripslashes( implode( '\n', $alertmessages ) ) : '' ) );
+		cbRedirect( cbSef( $return, false ), ( count( $alertmessages ) > 0 ? stripslashes( implode( '\n', $alertmessages ) ) : '' ) );
 	}
 }
 
@@ -1769,110 +1639,64 @@ function logout() {
 	    	return;
 	    }
 	}
-	
-	$_CB_database->setQuery( "SELECT * "
-	. "\nFROM #__users u, "
-	. "\n#__comprofiler ue"
-	. "\nWHERE u.id=" . (int) $_CB_framework->myId() . " AND u.id = ue.id"
-	);
-	$row = null;
-	$_CB_database->loadObject( $row );
-	$_PLUGINS->loadPluginGroup('user');
-	$_PLUGINS->trigger( 'onBeforeLogout', array($row));
-	if($_PLUGINS->is_errors()) {
+
+	// Do the logout including all authentications and event firing:
+	cbimport( 'cb.authentication' );
+	$cbAuthenticate		=	new CBAuthentication();
+	$resultError		=	$cbAuthenticate->logout( $return );
+
+	if ( $resultError ) {
 		echo "<script type=\"text/javascript\">alert('".addslashes($_PLUGINS->getErrorMSG())."');</script>\n";
 		echo "<div class=\"message\">".$_PLUGINS->getErrorMSG()."</div>";;
 		return;
 	}
-	$loggedOut		=	false;
-	$_PLUGINS->trigger( 'onDoLogoutNow', array( &$loggedOut, &$row, &$return ) );
-	if ( ! $loggedOut ) {
-		$_CB_framework->logout();
-	}
-	$_PLUGINS->trigger( 'onAfterLogout', array($row, true));
-
-	if ( ! ( ( cbStartOfStringMatch( $return, $_CB_framework->getCfg( 'live_site' ) ) || cbStartOfStringMatch( $return, 'index.php' ) ) ) ) {
-		$return			=	null;
-	} elseif ( strpos( $return, 'comprofiler' /* 'com_comprofiler' */ ) && ( strpos( $return, 'login') || strpos( $return, 'logout') || strpos( $return, 'registers' ) || strpos( strtolower( $return ), 'lostpassword' ) ) ) {
-	// checks for the presence of a return url
-	// and ensures that this url is not the registration or login pages
-		$return			=	null;
-	}
 
 	cbRedirect( cbSef( ( $return ? $return : 'index.php' ), false ), ( $message ? stripslashes( _LOGOUT_SUCCESS ) : '' ) );
 }
-function confirm($confirmcode){
+function confirm( $confirmcode ) {
 	global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS;
 	
-	if( $_CB_framework->myId() < 1) {
-		$lengthConfirmcode = strlen($confirmcode);
-		if ($lengthConfirmcode == ( 3+32+8 ) ) {
-			$scrambleSeed	= (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7));
-			$unscrambledId	= $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) );
-			$query = "SELECT * FROM #__comprofiler c, #__users u "
-					. " WHERE c.id = " . (int) $unscrambledId . " AND c.cbactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id";
-	//	} elseif ($lengthConfirmcode == 32) {	//BBTODO: this is for confirmation links previous to CB 1.0.2: remove after CB 1.0.2:
-	//		$query = "SELECT * FROM #__comprofiler c, #__users u WHERE c.id=u.id AND md5(c.id) = '" . cbGetEscaped($confirmcode) . "'";
-		} else {
-			cbNotAuth();
-			return;			
-		}
-		$_CB_database->setQuery($query);
-		$user = $_CB_database->loadObjectList();	
+	if( $_CB_framework->myId() < 1 ) {
+		$unscrambledId						=	moscomprofilerUser::getUserIdFromActivationCode( $confirmcode );
+		if ( $unscrambledId ) {
+			$cbUser							=	CBuser::getInstance( (int) $unscrambledId );
+			if ( $cbUser ) {
+				$user						=	$cbUser->getUserData();
+				if ( $user && $user->id ) {
+					if ( $user->confirmed == 0 ) {
+						if ( $user->checkActivationCode( $confirmcode ) ) {
+							// THIS is the normal case: user exists, is not yet confirmed, and confirmation code does match:
+							$messagesToUser	=	null;
+							$confirmed		=	$user->confirmUser( $messagesToUser );
+						} else {
+							// confirmation code does not match:
+							$messagesToUser	=	array( _UE_WRONG_CONFIRMATION_CODE );
+							$confirmed		=	false;
+						}
+					} else {
+						// User has already confirmed: show friendly activation messages depending on his state:
+						$messagesToUser		=	getActivationMessage( $user, 'UserConfirmation' );
+						$confirmed			=	true;
+					}
 
-		if ( ( $user === null ) || ( count( $user ) == 0 ) /* || ( ($lengthConfirmcode == 32) && isset($user[0]->cbactivation ) && $user[0]->cbactivation ) */ ) {
-			$query = "SELECT * FROM #__comprofiler c, #__users u "
-					. " WHERE c.id = " . (int) $unscrambledId . " AND c.id=u.id";
-			$_CB_database->setQuery($query);
-			$user = $_CB_database->loadObjectList();
-			if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user[0]->confirmed == 0) ) {
-				cbNotAuth();
-			} else {
-				$messagesToUser = getActivationMessage($user[0], "UserConfirmation");
-				echo "\n<div>" . implode( "</div>\n<div>", $messagesToUser ) . "</div>\n";
+					if ( $confirmed ) {
+						// THIS is the normal case: user exists, is not yet confirmed, and confirmation code does match:
+						$class				=	'cbconfirmationinfo';
+					} else {
+						$class				=	'error';
+					}
+					echo "\n" . '<div class="cbconfirming"><div class="' . $class . '">' . implode( '</div><div class="' . $class . '">', $messagesToUser ) . "</div></div>\n";
+					return;
+				}
 			}
-			return;
 		}
-
-		if ( ( $ueConfig['emailpass'] == '1' ) && ( $user[0]->approved == 1 ) ) {
-			$pwd			=	cbMakeRandomString( 8, true );
-			$pwd_md5		=	cbHashPassword( $pwd );
-			$user[0]->password	=	$pwd;
-		}
-		
-		$_PLUGINS->loadPluginGroup('user');		
-		$_PLUGINS->trigger( 'onBeforeUserConfirm', array($user[0]));
-		if($_PLUGINS->is_errors()) {
-			echo $_PLUGINS->getErrorMSG("<br />");
-			return;
-		}
-
-		$query = "UPDATE #__comprofiler SET confirmed = 1 WHERE id=" . (int) $user[0]->id;
-		$_CB_database->setQuery($query);
-		$_CB_database->query();
-
-		if ( ( $ueConfig['emailpass'] == '1' ) && ( $user[0]->approved == 1 ) ) {
-			$_CB_database->setQuery( "UPDATE #__users SET password = " . $_CB_database->Quote( $pwd_md5 ) . " WHERE id=" . (int) $user[0]->id );
-			$_CB_database->query();
-		}
-
-		if ( $user[0]->confirmed == 1 ) {
-			$messagesToUser = getActivationMessage($user[0], "UserConfirmation");
-		} else {
-			$user[0]->confirmed = 1;
-			$messagesToUser = activateUser($user[0], 1, "UserConfirmation");
-		}
-		$_PLUGINS->trigger( 'onAfterUserConfirm', array($user[0],true));
-		
-		echo "\n<div>" . implode( "</div>\n<div>", $messagesToUser ) . "</div>\n";
-
+		// this is the error case where the URL is simply not right:
+		cbNotAuth();
+		return;			
 	} else {
-//		cbRedirect( cbSef( 'index.php?option=com_comprofiler'.getCBprofileItemid(), false ) );
-//		cbNotAuth(); :
-		echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />";
-		return;
+		// this is the case where the user is already logged in (mostly test-cases):
+		echo '<div class="error">' . _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !</div>";
 	}
-
 }
 
 
@@ -1908,7 +1732,7 @@ function approveImage() {
 			$query = "SELECT avatar FROM #__comprofiler WHERE id = " . (int) $avatar;
 			$_CB_database->setQuery($query);
 			$file = $_CB_database->loadResult();
-		   	if(eregi("gallery/",$file)==false && is_file($_CB_framework->getCfg('absolute_path')."/images/comprofiler/".$file)) {
+		   	if(preg_match("/gallery\\//i",$file)==false && is_file($_CB_framework->getCfg('absolute_path')."/images/comprofiler/".$file)) {
 				unlink($_CB_framework->getCfg('absolute_path')."/images/comprofiler/".$file);
 				if(is_file($_CB_framework->getCfg('absolute_path')."/images/comprofiler/tn".$file)) unlink($_CB_framework->getCfg('absolute_path')."/images/comprofiler/tn".$file);
 			}
@@ -2121,29 +1945,25 @@ function approveUser($uids) {
 	}
 
 	foreach($uids AS $uid) {
-		$query = "SELECT * FROM #__comprofiler c, #__users u WHERE c.id=u.id AND c.id = " . (int) $uid;
-		$_CB_database->setQuery($query);
-		$user = $_CB_database->loadObjectList();
-		$row = $user[0];
-		if ( $ueConfig['emailpass'] == "1" ) {
-			$pwd			=	cbMakeRandomString( 8, true );
-			$pwd_md5		=	cbHashPassword( $pwd );
-			$row->password	=	$pwd;
+		$cbUser				=	CBuser::getInstance( (int) $uid );
+		$user				=	$cbUser->getUserData();
+		if ( $user->approved != 1 ) {
+			if ( $ueConfig['emailpass'] == "1" ) {
+				$user->setRandomPassword();
+			}
+			$_PLUGINS->trigger( 'onBeforeUserApproval', array( $user, true ) );
+			if($_PLUGINS->is_errors()) {
+				cbRedirect( cbSef("index.php?option=com_comprofiler&amp;task=pendingApprovalUser".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $_PLUGINS->getErrorMSG(), 'error' );
+				return;
+			}
+			$user->approved		=	1;
+			$user->storeApproved();
+			if ( $ueConfig['emailpass'] == "1" ) {
+				$user->storePassword();
+			}
+			$_PLUGINS->trigger( 'onAfterUserApproval', array( $user, true, true ) );
+			activateUser($user, 1, "UserApproval", false);
 		}
-		$_PLUGINS->trigger( 'onBeforeUserApproval', array($row,true));
-		if($_PLUGINS->is_errors()) {
-			cbRedirect( cbSef("index.php?option=com_comprofiler&amp;task=pendingApprovalUser".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $_PLUGINS->getErrorMSG(), 'error' );
-			return;
-		}
-		$_CB_database->SetQuery( "UPDATE #__comprofiler SET approved=1 WHERE id=" . (int) $uid );
-		$_CB_database->query();
-		$row->approved = 1;
-		if ( $ueConfig['emailpass'] == "1" ) {
-			$_CB_database->setQuery( "UPDATE #__users SET password = " . $_CB_database->Quote( $pwd_md5 ) . " WHERE id=" . (int) $uid );
-			$_CB_database->query();
-		}
-		$_PLUGINS->trigger( 'onAfterUserApproval', array($row,true,true));
-		activateUser($row, 1, "UserApproval", false);
 	}
 	cbRedirect( cbSef( 'index.php?option=com_comprofiler&amp;task=pendingApprovalUser' . $andItemid, false ), ( count( $uids ) ) ? count( $uids ) . ' ' . _UE_USERAPPROVAL_SUCCESSFUL : '' );
 
@@ -2229,7 +2049,7 @@ function addConnection($userid,$connectionid,$umsg=null) {
 	$cbCon=new cbConnection($userid);
 	$cbCon->addConnection($connectionid,stripcslashes($umsg));
 	$url=cbSef( "index.php?option=com_comprofiler&amp;task=userProfile&amp;user=" . $connectionid . $andItemid );
-	echo "<script type=\"text/javascript\"> alert('".addslashes(htmlspecialchars($cbCon->getUserMSG()))."'); document.location.href='".unHtmlspecialchars($url)."'; </script>\n";
+	echo "<script type=\"text/javascript\"> alert('".addslashes(htmlspecialchars($cbCon->getUserMSG()))."'); document.location.href='".cbUnHtmlspecialchars($url)."'; </script>\n";
 }
 
 function removeConnection( $userid, $connectionid ) {
@@ -2254,7 +2074,7 @@ function removeConnection( $userid, $connectionid ) {
 
 	// $url=cbSef("index.php?option=com_comprofiler&task=manageConnections");
 	$url=cbSef( "index.php?option=com_comprofiler&amp;tab=getConnectionTab" . $andItemid );
-	echo "<script type=\"text/javascript\"> alert('".addslashes($msg)."'); document.location.href='".unHtmlspecialchars($url)."'; </script>\n";
+	echo "<script type=\"text/javascript\"> alert('".addslashes($msg)."'); document.location.href='".cbUnHtmlspecialchars($url)."'; </script>\n";
 
 }
 
@@ -2397,174 +2217,174 @@ function processConnectionActions($connectionids) {
 	return;
 }
 
-/* NxtLvl Mod */
-function nxtlvlconfirm($confirmcode){
-	global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS;
-
-	if(!$confirmcode){
-		return;
-	}
-	
-	if( $_CB_framework->myId() < 1) {
-		$lengthConfirmcode = strlen($confirmcode);
-		if ($lengthConfirmcode == ( 3+32+8 ) ) {
-			$scrambleSeed	= (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7));
-			$unscrambledId	= $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) );
-			$query = "SELECT * FROM #__comprofiler c, #__users u "
-					. " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id";
-		} else {
-		    /* TODO: Possibly someone trying to Spoof the activation code */
-			cbNotAuth();
-			return;			
-		}
-		$_CB_database->setQuery($query);
-		$user = $_CB_database->loadAssoc();	
-
-		if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) {
-			echo "Error unable to find user. Manual update to NxtLevel Access might be required. Please contact Website Administrator";
-			return;
-		}
-		$query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm");
-		$_CB_database->setQuery($query);
-		$raw = $_CB_database->loadRow();
-		if(!$raw){
-			echo "Error getting params for NxtLevel Plugin";
-			return;
-		} 
-					
-		$nxtlvlparams = new cbParamsBase($raw);
-		$nxtlvlparams->loadFromDB('nxtlvlconfirm');
-		
-		$query = "SELECT id FROM #__core_acl_aro_groups WHERE name= ". $_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup'));
-		$_CB_database->setQuery($query);
-		$nxtlvlGroup = $_CB_database->loadResult();
-		
-		if(!$nxtlvlGroup){
-			echo "Error finding NxtLevel Group";
-			return;
-		}
-				
-		$query = "UPDATE #__users SET gid = ".$nxtlvlGroup.", usertype=".$_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup'))." WHERE id=" . (int) $user['id'];
-		$_CB_database->setQuery($query);
-		$_CB_database->query();
-		if(!$_CB_database->getAffectedRows()){
-			echo "Error updating User to NxtLevel Group";
-			return;
-		}
-		
-		$query = "SELECT id FROM #__core_acl_aro WHERE section_value='users' AND value=". (int)$user['id'];
-		$_CB_database->setQuery($query);
-		$_CB_database->query();
-		$nxtlvlARO = $_CB_database->loadResult();
-		if(!$nxtlvlARO){
-			echo "Error finding ARO value for NxtLevel user";
-			return;
-		}
-				
-		$query = "UPDATE #__core_acl_groups_aro_map SET group_id= ".$nxtlvlGroup." WHERE aro_id=" . $nxtlvlARO;
-		$_CB_database->setQuery($query);
-		$_CB_database->query();
-		if(!$_CB_database->getAffectedRows()){
-			echo "Error updating Group Map to NxtLevel Group";
-			return;
-		}
-		
-		$cbNotification = new cbNotification();
-		$myUser =&	CBuser::getInstance( $user['id'] );
-		
-		$extraStrings = array();
-		$extraStrings['sitename'] = $_CB_framework->getCfg('sitename');
-		
-		$watchField = $nxtlvlparams->get('nxtlvlWatchFieldId');
-		$extraStrings['nxtlvlfield'] = $user[$watchField];
-		$extraStrings['name'] = $user['firstname'];
-		$extraStrings['br'] = "\r\n";
-				
-		$subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedSubject'),true,true,$extraStrings);
-		$body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedBody'),true,true,$extraStrings);
-		
-		$res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true);
-		if(!$res){
-			$messagesToUser = "User Upgraded to NxtLevel but unable to send NxtLevel Notification message to user.";
-		}else{
-			$messagesToUser = "User Upgraded to NxtLevel and NxtLevel Notification message sent to user.";
-		}
-		
-		echo "\n<div>" . $messagesToUser . "</div>\n";
-
-	} else {
-		echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />";
-		return;
-	}
-
-}
-
-function nxtlvldeny($confirmcode){
-	global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS;
-	
-		if(!$confirmcode){
-		return;
-	}
-	
-	if( $_CB_framework->myId() < 1) {
-		$lengthConfirmcode = strlen($confirmcode);
-		if ($lengthConfirmcode == ( 3+32+8 ) ) {
-			$scrambleSeed	= (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7));
-			$unscrambledId	= $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) );
-			$query = "SELECT * FROM #__comprofiler c, #__users u "
-					. " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id";
-		} else {
-		    /* TODO: Possibly someone trying to Spoof the activation code */
-			cbNotAuth();
-			return;			
-		}
-		$_CB_database->setQuery($query);
-		$user = $_CB_database->loadAssoc();	
-
-		if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) {
-			echo "Error unable to find user. Manual NxtLevel failure notification might be required. Please contact Website Administrator.";
-			return;
-		}
-		$query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm");
-		$_CB_database->setQuery($query);
-		$raw = $_CB_database->loadRow();
-		if(!$raw){
-			echo "Error getting params for NxtLevel Plugin. Manual NxtLevel failure notification might be required. Please contact Website Administrator.";
-			return;
-		} 
-					
-		$nxtlvlparams = new cbParamsBase($raw);
-		$nxtlvlparams->loadFromDB('nxtlvlconfirm');
-		
-		$cbNotification = new cbNotification();
-		$myUser =&	CBuser::getInstance( $user['id'] );
-		
-		$extraStrings = array();
-		$extraStrings['sitename'] = $_CB_framework->getCfg('sitename');
-		
-		$watchField = $nxtlvlparams->get('nxtlvlWatchFieldId');
-		$extraStrings['nxtlvlfield'] = $user[$watchField];
-		$extraStrings['name'] = $user['firstname'];
-		$extraStrings['br'] = "\r\n";
-				
-		$subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedSubject'),true,true,$extraStrings);
-		$body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedBody'),true,true,$extraStrings);
-		
-		$res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true);
-		if(!$res){
-			$messagesToUser = "Error - Unable to send NxtLevel Notification message to user.";
-		}else{
-			$messagesToUser = "NxtLevel Correction Notification message sent to user.";
-		}
-		
-		echo "\n<div>" . $messagesToUser . "</div>\n";
-
-	} else {
-		echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />";
-		return;
-	}
-
-}
-/* End NxtLvl Mod */
-
+/* NxtLvl Mod */ 
+ function nxtlvlconfirm($confirmcode){ 
+         global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS; 
+  
+         if(!$confirmcode){ 
+                 return; 
+         } 
+          
+         if( $_CB_framework->myId() < 1) { 
+                 $lengthConfirmcode = strlen($confirmcode); 
+                 if ($lengthConfirmcode == ( 3+32+8 ) ) { 
+                         $scrambleSeed   = (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7)); 
+                         $unscrambledId  = $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) ); 
+                         $query = "SELECT * FROM #__comprofiler c, #__users u " 
+                                         . " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id"; 
+                 } else { 
+                     /* TODO: Possibly someone trying to Spoof the activation code */ 
+                         cbNotAuth(); 
+                         return;                  
+                 } 
+                 $_CB_database->setQuery($query); 
+                 $user = $_CB_database->loadAssoc();      
+  
+                 if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) { 
+                         echo "Error unable to find user. Manual update to NxtLevel Access might be required. Please contact Website Administrator"; 
+                         return; 
+                 } 
+                 $query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm"); 
+                 $_CB_database->setQuery($query); 
+                 $raw = $_CB_database->loadRow(); 
+                 if(!$raw){ 
+                         echo "Error getting params for NxtLevel Plugin"; 
+                         return; 
+                 }  
+                                          
+                 $nxtlvlparams = new cbParamsBase($raw); 
+                 $nxtlvlparams->loadFromDB('nxtlvlconfirm'); 
+                  
+                 $query = "SELECT id FROM #__core_acl_aro_groups WHERE name= ". $_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup')); 
+                 $_CB_database->setQuery($query); 
+                 $nxtlvlGroup = $_CB_database->loadResult(); 
+                  
+                 if(!$nxtlvlGroup){ 
+                         echo "Error finding NxtLevel Group"; 
+                         return; 
+                 } 
+                                  
+                 $query = "UPDATE #__users SET gid = ".$nxtlvlGroup.", usertype=".$_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup'))." WHERE id=" . (int) $user['id']; 
+                 $_CB_database->setQuery($query); 
+                 $_CB_database->query(); 
+                 if(!$_CB_database->getAffectedRows()){ 
+                         echo "Error updating User to NxtLevel Group"; 
+                         return; 
+                 } 
+                  
+                 $query = "SELECT id FROM #__core_acl_aro WHERE section_value='users' AND value=". (int)$user['id']; 
+                 $_CB_database->setQuery($query); 
+                 $_CB_database->query(); 
+                 $nxtlvlARO = $_CB_database->loadResult(); 
+                 if(!$nxtlvlARO){ 
+                         echo "Error finding ARO value for NxtLevel user"; 
+                         return; 
+                 } 
+                                  
+                 $query = "UPDATE #__core_acl_groups_aro_map SET group_id= ".$nxtlvlGroup." WHERE aro_id=" . $nxtlvlARO; 
+                 $_CB_database->setQuery($query); 
+                 $_CB_database->query(); 
+                 if(!$_CB_database->getAffectedRows()){ 
+                         echo "Error updating Group Map to NxtLevel Group"; 
+                         return; 
+                 } 
+                  
+                 $cbNotification = new cbNotification(); 
+                 $myUser =&      CBuser::getInstance( $user['id'] ); 
+                  
+                 $extraStrings = array(); 
+                 $extraStrings['sitename'] = $_CB_framework->getCfg('sitename'); 
+                  
+                 $watchField = $nxtlvlparams->get('nxtlvlWatchFieldId'); 
+                 $extraStrings['nxtlvlfield'] = $user[$watchField]; 
+                 $extraStrings['name'] = $user['firstname']; 
+                 $extraStrings['br'] = "\r\n"; 
+                                  
+                 $subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedSubject'),true,true,$extraStrings); 
+                 $body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedBody'),true,true,$extraStrings); 
+                  
+                 $res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true); 
+                 if(!$res){ 
+                         $messagesToUser = "User Upgraded to NxtLevel but unable to send NxtLevel Notification message to user."; 
+                 }else{ 
+                         $messagesToUser = "User Upgraded to NxtLevel and NxtLevel Notification message sent to user."; 
+                 } 
+                  
+                 echo "\n<div>" . $messagesToUser . "</div>\n"; 
+  
+         } else { 
+                 echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />"; 
+                 return; 
+         } 
+  
+ } 
+  
+ function nxtlvldeny($confirmcode){ 
+         global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS; 
+          
+                 if(!$confirmcode){ 
+                 return; 
+         } 
+          
+         if( $_CB_framework->myId() < 1) { 
+                 $lengthConfirmcode = strlen($confirmcode); 
+                 if ($lengthConfirmcode == ( 3+32+8 ) ) { 
+                         $scrambleSeed   = (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7)); 
+                         $unscrambledId  = $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) ); 
+                         $query = "SELECT * FROM #__comprofiler c, #__users u " 
+                                         . " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id"; 
+                 } else { 
+                     /* TODO: Possibly someone trying to Spoof the activation code */ 
+                         cbNotAuth(); 
+                         return;                  
+                 } 
+                 $_CB_database->setQuery($query); 
+                 $user = $_CB_database->loadAssoc();      
+  
+                 if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) { 
+                         echo "Error unable to find user. Manual NxtLevel failure notification might be required. Please contact Website Administrator."; 
+                         return; 
+                 } 
+                 $query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm"); 
+                 $_CB_database->setQuery($query); 
+                 $raw = $_CB_database->loadRow(); 
+                 if(!$raw){ 
+                         echo "Error getting params for NxtLevel Plugin. Manual NxtLevel failure notification might be required. Please contact Website Administrator."; 
+                         return; 
+                 }  
+                                          
+                 $nxtlvlparams = new cbParamsBase($raw); 
+                 $nxtlvlparams->loadFromDB('nxtlvlconfirm'); 
+                  
+                 $cbNotification = new cbNotification(); 
+                 $myUser =&      CBuser::getInstance( $user['id'] ); 
+                  
+                 $extraStrings = array(); 
+                 $extraStrings['sitename'] = $_CB_framework->getCfg('sitename'); 
+                  
+                 $watchField = $nxtlvlparams->get('nxtlvlWatchFieldId'); 
+                 $extraStrings['nxtlvlfield'] = $user[$watchField]; 
+                 $extraStrings['name'] = $user['firstname']; 
+                 $extraStrings['br'] = "\r\n"; 
+                                  
+                 $subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedSubject'),true,true,$extraStrings); 
+                 $body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedBody'),true,true,$extraStrings); 
+                  
+                 $res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true); 
+                 if(!$res){ 
+                         $messagesToUser = "Error - Unable to send NxtLevel Notification message to user."; 
+                 }else{ 
+                         $messagesToUser = "NxtLevel Correction Notification message sent to user."; 
+                 } 
+                  
+                 echo "\n<div>" . $messagesToUser . "</div>\n"; 
+  
+         } else { 
+                 echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />"; 
+                 return; 
+         } 
+  
+ } 
+ /* End NxtLvl Mod */ 
+ 
 ?>
