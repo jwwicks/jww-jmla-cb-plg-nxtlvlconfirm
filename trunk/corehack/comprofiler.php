@@ -1,7 +1,7 @@
 <?php
 /**
 * Joomla/Mambo Community Builder
-* @version $Id: comprofiler.php 884 2010-02-20 11:39:34Z beat $
+* @version $Id: comprofiler.php 1150 2010-07-06 14:44:25Z beat $
 * @package Community Builder
 * @subpackage comprofiler.php
 * @author JoomlaJoe and Beat
@@ -34,10 +34,8 @@ if ( $memMax ) {
 }
 
 /** @global mosMainFrame $mainframe
- *  @global stdClass $access
  */
 global $mainframe;
-require_once( $mainframe->getPath( 'front_html' ) );
 /**
  * CB framework
  * @global CBframework $_CB_framework
@@ -47,9 +45,11 @@ global $_CB_framework;
  */
 global $ueConfig;
 if ( defined( 'JPATH_ADMINISTRATOR' ) ) {
-	include_once( JPATH_ADMINISTRATOR . '/components/com_comprofiler/plugin.foundation.php' );
+	include_once JPATH_ADMINISTRATOR . '/components/com_comprofiler/plugin.foundation.php';
+	require_once $_CB_framework->getCfg( 'absolute_path' ) . '/components/com_comprofiler/comprofiler.html.php';
 } else {
-	include_once( $mainframe->getCfg( 'absolute_path' ). '/administrator/components/com_comprofiler/plugin.foundation.php' );
+	include_once $mainframe->getCfg( 'absolute_path' ). '/administrator/components/com_comprofiler/plugin.foundation.php';
+	require_once $mainframe->getPath( 'front_html' );
 }
 
 $_CB_framework->cbset( '_ui', 1 );	// we're in 1: frontend, 2: admin back-end
@@ -91,7 +91,7 @@ switch( $task ) {
 	$oldignoreuserabort = ignore_user_abort(true);
 	userSave( $option, (int) cbGetParam( $_POST, 'id', 0 ) );
 	break;
-	
+
 	case "userProfile":
 	case "userprofile":
 	userProfile($option, $_CB_framework->myId(), _UE_UPDATE);
@@ -131,7 +131,7 @@ switch( $task ) {
 	$oldignoreuserabort = ignore_user_abort(true);
 	login();
 	break;
-	
+
 	case "logout":
 	$oldignoreuserabort = ignore_user_abort(true);
 	logout();
@@ -142,7 +142,7 @@ switch( $task ) {
 	confirm( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
 	break;
 
-	/* NxtLvl Mod */ 
+/* NxtLvl Mod */ 
 	 case "nxtlvlconfirm": 
 	 $oldignoreuserabort = ignore_user_abort(true); 
 	 nxtlvlconfirm( cbGetParam( $_GET, 'confirmcode', '1' ) ); // mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam... 
@@ -152,8 +152,8 @@ switch( $task ) {
 	 $oldignoreuserabort = ignore_user_abort(true); 
 	 nxtlvldeny( cbGetParam( $_GET, 'confirmcode', '1' ) ); // mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam... 
 	 break; 
-	 /* End NxtLvl Mod */ 
- 
+/* End NxtLvl Mod */ 
+
 	case "moderateImages":
 	case "moderateimages":
 	$oldignoreuserabort = ignore_user_abort(true);
@@ -245,7 +245,7 @@ switch( $task ) {
 	case "denyconnection":
 	$oldignoreuserabort = ignore_user_abort(true);
 	denyConnection( $_CB_framework->myId(), (int) cbGetParam($_REQUEST,'connectionid'));
-	break;	
+	break;
 
 	case "acceptConnection":
 	case "acceptconnection":
@@ -304,7 +304,17 @@ echo $_CB_framework->getAllJsPageCodes();
 $html		=	ob_get_contents();
 ob_end_clean();
 
-if ( cbGetParam( $_GET, 'no_html', 0 ) != 1 ) {
+if ( ( cbGetParam( $_GET, 'no_html', 0 ) != 1 ) && ( cbGetParam( $_GET, 'format' ) != 'raw' ) ) {
+
+	// Translations debug:
+	if ( ! defined( 'JPATH_ADMINISTRATOR' ) ) {
+		global $_CB_TxtIntStore;
+		$translationTable	=	$_CB_TxtIntStore->listUsedStrings();
+		if ( $translationTable ) {
+			$html 			.=	$translationTable;
+		} 
+	}
+
 	echo $_CB_framework->document->_outputToHead();
 }
 echo $html;
@@ -325,13 +335,13 @@ function sendUserEmail( $option, $toid, $fromid, $subject, $message ) {
 
 	$rowFrom = new moscomprofilerUser( $_CB_database );
 	$rowFrom->load( (int) $fromid );
-	
+
 	$rowTo = new moscomprofilerUser( $_CB_database );
 	$rowTo->load( (int) $toid );
 
 	$subject	=	stripslashes( $subject );		// cbGetParam() adds slashes...remove'em...
 	$message	=	stripslashes( $message );
-	
+
 	if ( ! $errorMsg ) {
 		$errorMsg	=	_UE_SESSIONTIMEOUT . " " . _UE_SENTEMAILFAILED;
 		if ( isset( $_POST["protect"] ) ) {
@@ -349,7 +359,7 @@ function sendUserEmail( $option, $toid, $fromid, $subject, $message ) {
 					} else {
 						$cbNotification	=	new cbNotification();
 						$res			=	$cbNotification->sendUserEmail($toid,$fromid,$subject,$message, true);
-					
+
 						if ($res) {
 							echo _UE_SENTEMAILSUCCESS;
 							if (is_array($pluginResults)) {
@@ -375,7 +385,7 @@ function emailUser($option,$uid) {
 		cbNotAuth();
 		return;
 	}
-	
+
 	$spamCheck = cbSpamProtect( $_CB_framework->myId(), false );
 	if ( $spamCheck ) {
 		echo $spamCheck;
@@ -383,9 +393,9 @@ function emailUser($option,$uid) {
 	}
 	$rowFrom = new moscomprofilerUser( $_CB_database );
 	$rowFrom->load( $_CB_framework->myId() );
-	
+
 	$rowTo = new moscomprofilerUser( $_CB_database );
-	$rowTo->load( (int) $uid );	
+	$rowTo->load( (int) $uid );
 	HTML_comprofiler::emailUser($option,$rowFrom,$rowTo);
 }
 
@@ -457,7 +467,7 @@ function userSave( $option, $uid ) {
 	if ( $_CB_framework->myId() == $uid ) {
 		$userComplete->lastupdatedate	=	date( 'Y-m-d H:i:s' );
 	}
-			
+
 	// Store new user state:
 
 	$saveResult					=	$userComplete->saveSafely( $_POST, $_CB_framework->getUi(), 'edit' );
@@ -489,8 +499,8 @@ function userAvatar( $option, $uid, $submitvalue) {
 	}
 	$row = new moscomprofilerUser( $_CB_database );
 	if ( ! $row->load( (int) $uid ) ) {
-		echo _UE_NOSUCHPROFILE; 
-		return; 
+		echo _UE_NOSUCHPROFILE;
+		return;
 	}
 
 	$do		=	cbGetParam( $_REQUEST, 'do', 'init' );
@@ -602,7 +612,7 @@ function userAvatar( $option, $uid, $submitvalue) {
 
 function & loadComprofilerUser( $uid ) {
 	global $_CB_framework, $_REQUEST;
-	
+
 	if ( ! isset( $_REQUEST['user'] ) ) {
 		if ( ! $uid ) {
 			$null		=	null;
@@ -664,9 +674,9 @@ function userProfile( $option, $uid, $submitvalue) {
 
 	$user					=&	loadComprofilerUser( $uid );
 
-	if ( $user === null ) { 
-		echo _UE_NOSUCHPROFILE; 
-		return; 
+	if ( $user === null ) {
+		echo _UE_NOSUCHPROFILE;
+		return;
 	}
 
 	HTML_comprofiler::userProfile( $user, $option, $submitvalue);
@@ -698,7 +708,7 @@ function tabClass( $option, $task, $uid ) {
 			} else {
 				$msg		=	_UE_NO_INDICATION;
 			}
-			
+
 			if ( $msg ) {
 				echo $msg;
 				return;
@@ -730,7 +740,7 @@ function tabClass( $option, $task, $uid ) {
 			echo $msg;
 			return;
 		}
-		
+
 		$fieldName			=	trim( substr( str_replace( $unsecureChars, '', urldecode( stripslashes( cbGetParam( $_REQUEST, "field" ) ) ) ), 0, 50 ) );
 		if ( ! $fieldName ) {
 			echo 'no field';
@@ -754,7 +764,7 @@ function tabClass( $option, $task, $uid ) {
 	}
 	$tabs					=	$cbUser->_getCbTabs( false );
 	if ( $task == 'fieldclass' ) {
-		$result			=	$tabs->fieldCall( $fieldName, $user, $_POST, $reason );		
+		$result			=	$tabs->fieldCall( $fieldName, $user, $_POST, $reason );
 	} else {
 		$result				=	$tabs->tabClassPluginTabs( $user, $_POST, $pluginName, $tabClassName, $method );
 	}
@@ -770,391 +780,17 @@ function tabClass( $option, $task, $uid ) {
 function usersList( $uid ) {
 	global $_CB_database, $_CB_framework, $ueConfig, $Itemid, $_PLUGINS, $_POST, $_REQUEST;
 
-	$search					=	null;
-//	$searchPOST				=	stripslashes( cbGetParam( $_POST, 'search' ) );
-	$searchGET				=	cbGetParam( $_GET, 'search' );
-	$limitstart				=	(int) cbGetParam( $_REQUEST, 'limitstart', 0 );
-	$searchmode				=	(int) cbGetParam( $_REQUEST, 'searchmode', 0 );
-
-	// old search on formated name:
-
-/*	if ( $searchPOST || count( $_POST ) ) {
-		// simple spoof check security
-		cbSpoofCheck( 'usersList' );
-		if ( cbGetParam( $_GET, "action" ) == "search" ) {
-			$search			=	$searchPOST;
-		}
-	} else
-		if ( isset( $_GET['limitstart'] ) ) {
-			$search				=	stripslashes( $searchGET );
-		}
-*/
-	// get my user and gets the list of user lists he is allowed to see (ACL):
-
-	$myCbUser				=&	CBuser::getInstance( $uid );
-	if ( $myCbUser === null ) {
-		$myCbUser			=&	CBuser::getInstance( null );
-	}
-	$myUser					=&	$myCbUser->getUserData();
-/*
-	$myUser					=	new moscomprofilerUser( $_CB_database );
-	if ( $uid ) {
-		$myUser->load( (int) $uid );
-	}
-*/
-	$useraccessgroupSQL		=	" AND useraccessgroupid IN (".implode(',',getChildGIDS(userGID($uid))).")";
-	$_CB_database->setQuery( "SELECT listid, title FROM #__comprofiler_lists WHERE published=1" . $useraccessgroupSQL . " ORDER BY ordering" );
-	$plists					=	$_CB_database->loadObjectList();
-	$lists					=	array();
-	$publishedlists			=	array();
-
-	for ( $i=0, $n=count( $plists ); $i < $n; $i++ ) {
-		$plist				=&	$plists[$i];
-		$listTitleNoHtml	=	strip_tags( cbReplaceVars( getLangDefinition( $plist->title ), $myUser, false, false ) );
-	   	$publishedlists[]	=	moscomprofilerHTML::makeOption( $plist->listid, $listTitleNoHtml );
-	}
-
-	// select either list selected or default list to which he has access (ACL):
+	cbimport( 'cb.lists' );
 
 	if ( isset( $_POST['listid'] ) ) {
 		$listid				=	(int) cbGetParam( $_POST, 'listid', 0 );
 	} else {
 		$listid				=	(int) cbGetParam( $_GET, 'listid', 0 );
 	}
-	if ( $listid == 0 ) {
-		$_CB_database->setQuery( "SELECT listid FROM #__comprofiler_lists "
-		. "\n WHERE `default`=1 AND published=1" . $useraccessgroupSQL );
-		$listid				=	(int) $_CB_database->loadresult();
-		if ( $listid == 0 && ( count( $plists ) > 0 ) ) {
-			$listid			=	(int) $plists[0]->listid;
-		}
-	}
-	if ( ! ( $listid > 0 ) ) {
-		echo _UE_NOLISTFOUND;
-		return;
-	}
+	$searchFormValuesRAW	=	$_GET;
 
-	// generates the drop-down list of lists:
-
-	if ( count( $plists ) > 1 ) {
-		$lists['plists']	=	moscomprofilerHTML::selectList( $publishedlists, 'listid', 'class="inputbox" size="1" onchange="this.form.submit();"', 'value', 'text', $listid, 1 );
-	}
-
-	// loads the list record:
-
-	$row					=	new moscomprofilerLists( $_CB_database );
-	if ( ( ! $row->load( (int) $listid ) ) || ( $row->published != 1 ) ) {
-		echo _UE_LIST_DOES_NOT_EXIST;
-		return;
-	}
-	if ( ! allowAccess( $row->useraccessgroupid,'RECURSE', userGID($uid) ) ) {
-		echo _UE_NOT_AUTHORIZED;
-		return;
-	}
-
-	$params					=	new cbParamsBase( $row->params );
-
-	$hotlink_protection		=	$params->get( 'hotlink_protection', 0 );
-	if ( $hotlink_protection == 1 ) {
-		if ( ( $searchGET !== null ) || $limitstart ) {
-			cbSpoofCheck( 'usersList', 'GET' );
-		}
-	}
-
-	$limit					=	(int) $params->get( 'list_limit' );
-	if ( $limit == 0 ) {
-		$limit				=	(int) $ueConfig['num_per_page'];
-	}
-
-	$showPaging				=	$params->get( 'list_paging', 1 );
-	if ( $showPaging != 1 ) {
-		$limitstart			=	0;
-	}
-
-	$isModerator			=	isModerator( $_CB_framework->myId() );
-
-	$_PLUGINS->loadPluginGroup( 'user' );
-	// $plugSearchFieldsArray	=	$_PLUGINS->trigger( 'onStartUsersList', array( &$listid, &$row, &$search, &$limitstart, &$limit ) );
-	$_PLUGINS->trigger( 'onStartUsersList', array( &$listid, &$row, &$search, &$limitstart, &$limit ) );
-	
-	// handles the users allowed to be listed in the list by ACL:
-
-	$allusergids			=	array();
-	$usergids				=	explode( ',', $row->usergroupids );
-/*	This was a bug tending to list admins when "public backend" was checked, and all frontend users when "public backend was checked. Now just ignore them:
-	foreach( $usergids AS $usergid ) {
-		$allusergids[]		=	$usergid;
-		if ($usergid==29 || $usergid==30) {
-			$groupchildren	=	array();
-			$groupchildren	=	$_CB_framework->acl->get_group_children( $usergid, 'ARO','RECURSE' );
-			$allusergids	=	array_merge($allusergids,$groupchildren);
-		}
-	}
-*/
-	$allusergids			=	array_diff( $usergids, array( 29, 30 ) );
-	$usergids				=	implode( ",", $allusergids );
-
-	// build SQL Select query:
-
-	$random					=	0;
-	if( $row->sortfields != '' ) {
-		$matches			=	null;
-		if ( preg_match( '/^RAND\(\)\s(ASC|DESC)$/', $row->sortfields, $matches ) ) {
-			// random sorting needs to have same seed on pages > 1 to not have probability to show same users:
-			if ( $limitstart ) {
-				$random		=	(int) cbGetParam( $_GET, 'rand', 0 );
-			}
-			if ( ! $random ) {
-				$random		=	rand( 0, 32767 );
-			}
-			$row->sortfields =	'RAND(' . (int) $random . ') ' . $matches[1];
-		}
-		$orderby			=	"\n ORDER BY " . $row->sortfields;
-	}
-	$filterby				=	'';
-	if ( $row->filterfields != '' ) {
-		$filterRules		=	utf8RawUrlDecode( substr( $row->filterfields, 1 ) );
-		
-		if ( $_CB_framework->myId() ) {
-			$user			=	new moscomprofilerUser( $_CB_database );
-			if ( $user->load( (int) $_CB_framework->myId() ) ) {
-				$filterRules	=	cbReplaceVars( $filterRules, $user, array( $_CB_database, 'getEscaped' ), false, array() );
-			}
-		}
-		$filterby			=	" AND ". $filterRules;
-	}
-
-	// Prepare part after SELECT .... " and before "FROM" :
-	
-	$tableReferences		=	array( '#__comprofiler' => 'ue', '#__users' => 'u' );
-
-	// Fetch all fields:
-
-	$tabs					=	$myCbUser->_getCbTabs();		//	new cbTabs( 0, 1 );		//TBD: later: this private method should not be called here, but the whole users-list should go into there and be called here.
-
-	$allFields				=	$tabs->_getTabFieldsDb( null, $myUser, 'list' );
-	// $_CB_database->setQuery( "SELECT * FROM #__comprofiler_fields WHERE published = 1" );
-	// $allFields				=	$_CB_database->loadObjectList( 'fieldid', 'moscomprofilerFields', array( &$_CB_database ) );
-
-	
-	//Make columns array. This array will later be constructed from the tabs table:
-
-	$columns				=	array();
-	
-	for ( $i = 1; $i < 50; ++$i ) {
-		$enabledVar			=	"col".$i."enabled";
-
-		if ( ! isset( $row->$enabledVar ) ) {
-			break;
-		}
-		$titleVar			=	"col".$i."title";
-		$fieldsVar			=	"col".$i."fields";
-		$captionsVar		=	"col".$i."captions";
-
-		if ( $row->$enabledVar == 1 ) {
-			$col			=	new stdClass();
-			$col->fields	=	( $row->$fieldsVar ? explode( '|*|', $row->$fieldsVar ) : array() );
-			$col->title		=	$row->$titleVar;
-			$col->titleRendered		=	$myCbUser->replaceUserVars( $col->title );
-			$col->captions	=	$row->$captionsVar;
-			// $col->sort	=	1; //All columns can be sorted
-			$columns[$i]	=	$col;
-		}
-	}
-
-	// build fields and tables accesses, also check for searchable fields:
-
-	$searchableFields		=	array();
-	$fieldsSQL				=	getFieldsSQL( $columns, $allFields, $tableReferences, $searchableFields, $params );
-
-	$_PLUGINS->trigger( 'onAfterUsersListFieldsSql', array( &$columns, &$allFields, &$tableReferences ) );
-
-	$tablesSQL				=	array();
-	$joinsSQL				=	array();
-	$tablesWhereSQL			=	array(	'block'		=>	'u.block = 0',
-										'approved'	=>	'ue.approved = 1',
-										'confirmed'	=>	'ue.confirmed = 1'
-									 );
-	if ( ! $isModerator ) {
-		$tablesWhereSQL['banned']	=	'ue.banned = 0';
-	}
-	if ( $usergids ) {
-		$tablesWhereSQL['gid']		=	'u.gid IN (' . $usergids . ')';
-	}
-
-	foreach ( $tableReferences as $table => $name ) {
-		$tablesSQL[]				=	$table . ' ' . $name;
-		if ( $name != 'u' ) {
-			$tablesWhereSQL[]		=	"u.`id` = " . $name . ".`id`";
-		}
-	}
-
-	// handles search criterias:
-
-	$list_compare_types		=	$params->get( 'list_compare_types', 0 );
-	$searchVals				=	new stdClass();
-	$searchesFromFields		=	$tabs->applySearchableContents( $searchableFields, $searchVals, $_GET, $list_compare_types );
-	$whereFields			=	$searchesFromFields->reduceSqlFormula( $tableReferences, $joinsSQL, TRUE );
-	if ( $whereFields ) {
-		$tablesWhereSQL[]	=	'(' . $whereFields . ')';
-/*
-		if ( $search === null ) {
-			$search			=	'';
-		}
-*/
-	}
-
-	$_PLUGINS->trigger( 'onBeforeUsersListBuildQuery', array( &$tablesSQL, &$joinsSQL, &$tablesWhereSQL ) );
-
-	$queryFrom				=	"FROM " . implode( ', ', $tablesSQL )
-							.	( count( $joinsSQL ) ? "\n " . implode( "\n ", $joinsSQL ) : '' )
-							.	"\n WHERE " . implode( "\n AND ", $tablesWhereSQL );
-
-	// handles old formatted names search:
-/*
-	if ( $search != '' ) {
-		$searchSQL			=	cbEscapeSQLsearch( strtolower( $_CB_database->getEscaped( $search ) ) );
-		$queryFrom 			.=	" AND (";
-		
-		$searchFields		=	array();
-		if ( $ueConfig['name_format']!='3' ) {
-			$searchFields[]	=	"u.name LIKE '%%s%'";
-		}
-		if ( $ueConfig['name_format']!='1' ) {
-			$searchFields[]	=	"u.username LIKE '%%s%'";
-		}
-		if ( is_array( $plugSearchFieldsArray ) ) {
-			foreach ( $plugSearchFieldsArray as $v ) {
-				if ( is_array( $v ) ) {
-					$searchFields	=	array_merge( $searchFields, $v );
-				}
-			}
-		}
-		$queryFrom			.=	str_replace( '%s', $searchSQL, implode( " OR ", $searchFields ) );
-		$queryFrom			.=	")";
-	}
-*/
-	$queryFrom				.=	" " . $filterby;
-
-	$_PLUGINS->trigger( 'onBeforeUsersListQuery', array( &$queryFrom, 1 ) );	// $uid = 1
-
-	$errorMsg		=	null;
-
-	// counts number of users and loads the listed fields of the users if not in search-form-only mode:
-
-	if ( $searchmode == 0 ) {
-		$_CB_database->setQuery( "SELECT COUNT(*) " . $queryFrom );
-		$total					=	$_CB_database->loadResult();
-	
-		if ( ( $limit > $total ) || ( $limitstart >= $total ) ) {
-			$limitstart			=	0;
-		}
-	
-		// $query					=	"SELECT u.id, ue.banned, '' AS 'NA' " . ( $fieldsSQL ? ", " . $fieldsSQL . " " : '' ) . $queryFrom . " " . $orderby
-		$query					=	"SELECT ue.*, u.*, '' AS 'NA' " . ( $fieldsSQL ? ", " . $fieldsSQL . " " : '' ) . $queryFrom . " " . $orderby
-		.	"\n LIMIT " . (int) $limitstart . ", " . (int) $limit;
-	
-		$_CB_database->setQuery($query);
-		$users				=	$_CB_database->loadObjectList( null, 'moscomprofilerUser', array( &$_CB_database ) );
-
-		if ( is_array( $users ) ) {
-			// creates the CBUsers in cache corresponding to the $users:
-			foreach ( array_keys( $users ) as $k) {
-				CBuser::setUserGetCBUserInstance( $users[$k] );
-			}
-		} else {
-			$users			=	array();
-			$errorMsg		=	_UE_ERROR_IN_QUERY_TURN_SITE_DEBUG_ON_TO_VIEW;
-		}
-		
-		if ( count( get_object_vars( $searchVals ) ) > 0 ) {
-			$search			=	'';
-		} else {
-			$search			=	null;
-		}
-
-	} else {
-		$total				=	null;
-		$users				=	array();
-		if ( $search === null ) {
-			$search			=	'';
-		}
-	}
-
-	// Compute itemId of users in users-list:
-
-	if ( $Itemid ) {
-		$option_itemid		=	(int) $Itemid;
-	} else {
-		$option_itemid		=	getCBprofileItemid( 0 );
-	}
-
-	HTML_comprofiler::usersList( $row, $users, $columns, $allFields, $lists, $listid, $search, $searchmode, $option_itemid, $limitstart, $limit, $total, $myUser, $searchableFields, $searchVals, $tabs, $list_compare_types, $showPaging, $hotlink_protection, $errorMsg, $random );
-}
-/**
- * Creates the column references for the userlist query
- *
- * @param  array         $columns
- * @param  array         $allFields
- * @param  array         $tables
- * @param  array         $searchableFields
- * @param  cbParamsBase  $params
- * @return string
- */
-function getFieldsSQL( &$columns, &$allFields, &$tables, &$searchableFields, &$params ){
-	$colRefs										=	array();
-	
-	$newtableindex									=	0;
-
-	$list_search									=	(int) $params->get( 'list_search', 1 );
-
-	foreach ( $columns as $i => $column ) {
-		foreach ( $column->fields as $k => $fieldid ) {
-			if ( isset( $allFields[$fieldid] ) ) {
-				// now done in field fetching:
-				//	if ( ! is_object( $allFields[$fieldid]->params ) ) {
-				//		$allFields[$fieldid]->params	=	new cbParamsBase( $allFields[$fieldid]->params );
-				//	}
-				$field								=	$allFields[$fieldid];
-				if ( ! array_key_exists( $field->table, $tables ) ) {
-					$newtableindex++;
-					$tables[$field->table]			=  't'.$newtableindex;
-				}
-/*
-				if ( $field->name == 'avatar' ) {
-					$colRefs['avatarapproved']		=	'ue.`avatarapproved`';
-					$colRefs['name']				=	'u.`name`';
-					$colRefs['username']			=	'u.`username`';
-				}
-				if ( $field->type == 'formatname' ) {
-					$colRefs['name']				=	'u.`name`';
-					$colRefs['username']			=	'u.`username`';
-				}
-*/
-				if ( ( $tables[$field->table][0] != 'u' ) && ( $field->name != 'NA' ) ) {		// CB 1.1 table compatibility : TBD: remove after CB 1.2
-					foreach ( $field->getTableColumns() as $col ) {
-						$colRefs[$col]				=	$tables[$field->table] . '.' . $field->_db->NameQuote( $col );
-					}
-				}
-				if ( $field->searchable && ( $list_search == 1 ) ) {
-					$searchableFields[]				=&	$allFields[$fieldid];
-				}
-				$allFields[$fieldid]->_listed		=	true;
-			} else {
-				// field unpublished or deleted but still in list: remove field from columns, so that we don't handle it:
-				unset( $columns[$i]->fields[$k] );
-			}
-		}
-	}
-
-	if ( $list_search == 2 ) {
-		foreach ( $allFields as $fieldid => $field ) {
-			if ( $field->searchable ) {
-				$searchableFields[]					=&	$allFields[$fieldid];
-			}
-		}
-	}
-	return implode( ', ', $colRefs );
+	$cbList					=	new cbUsersList();
+	$cbList->drawUsersList( $uid, $listid, $searchFormValuesRAW );
 }
 
 function lostPassForm( $option ) {
@@ -1165,11 +801,13 @@ function lostPassForm( $option ) {
 }
 
 function sendNewPass( $option ) {
-	global $_CB_framework, $_CB_database, $Itemid, $_PLUGINS, $_POST;
-	
+	global $_CB_framework, $_CB_database, $ueConfig, $Itemid, $_PLUGINS, $_POST;
+
 	// simple spoof check security
 	cbSpoofCheck( 'lostPassForm' );
 	cbRegAntiSpamCheck();
+
+	$usernameExists	=	( ( isset( $ueConfig['login_type'] ) ) && ( $ueConfig['login_type'] < 2 ) );
 
 	// ensure no malicous sql gets past
 	$checkusername	=	trim( cbGetParam( $_POST, 'checkusername', '' ) );
@@ -1188,25 +826,25 @@ function sendNewPass( $option ) {
 	$_live_site		=	$_CB_framework->getCfg( 'live_site' );
 	$_sitename		=	"";	// NEEDED BY _NEWPASS_SUB for  sitename already added in subject by cbNotification class. was = $_CB_framework->getCfg( 'sitename' );
 
-	if ( ( $confirmEmail != '' ) && ! $checkusername ) {
+	if ( $usernameExists && ( $confirmEmail != '' ) && ! $checkusername ) {
 		$_CB_database->setQuery( "SELECT id, username FROM #__users"
 		. "\n WHERE email = " . $_CB_database->Quote( $confirmEmail )
 		);
 		$userIdUsername	=	null;
 		$result			=	$_CB_database->loadObjectList( $userIdUsername );
-		if ( ( ! is_array( $result ) ) || ( count( $result ) == 0 ) ) {
+		if ( $_CB_database->getErrorNum() || ( count( $result ) == 0 ) ) {
 			cbRedirect( cbSef( 'index.php?option=' . $option . '&amp;task=lostPassword' . ( $Itemid ? '&amp;Itemid=' . (int) $Itemid : '' ), false ), sprintf( _UE_EMAIL_DOES_NOT_EXISTS_ON_SITE, htmlspecialchars( $confirmEmail ) ), 'error' );
 		}
 		foreach ( $result as $userIdUsername ) {
 			$message = str_replace( '\n', "\n", sprintf( _UE_USERNAMEREMINDER_MSG, $_CB_framework->getCfg( 'sitename' ), $userIdUsername->username, $_live_site ) );
 			$subject = sprintf( _UE_USERNAMEREMINDER_SUB, $userIdUsername->username );
-		
+
 			$_PLUGINS->trigger( 'onBeforeUsernameReminder', array( $userIdUsername->id, &$subject, &$message ));
 			if ($_PLUGINS->is_errors()) {
 				cbRedirect( cbSef("index.php?option=$option&amp;task=lostPassword".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $_PLUGINS->getErrorMSG(), 'error' );
 				return;
 			}
-		
+
 			$cbNotification = new cbNotification();
 			$res	=	$cbNotification->sendFromSystem( $userIdUsername->id, $subject, $message );
 			if ( ! $res ) {
@@ -1220,25 +858,31 @@ function sendNewPass( $option ) {
 			cbRedirect( cbSef("index.php?option=$option&amp;task=done".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ),_UE_EMAIL_SENDING_ERROR );
 		}
 
-	} else {
-		$_CB_database->setQuery( "SELECT id FROM #__users"
-		. "\n WHERE username = " . $_CB_database->Quote( $checkusername ) . " AND email = " . $_CB_database->Quote( $confirmEmail )
-		);
+	} elseif ( $confirmEmail != '' ) {
+		if ( $usernameExists ) {
+			$_CB_database->setQuery( "SELECT id FROM #__users"
+			. "\n WHERE username = " . $_CB_database->Quote( $checkusername ) . " AND email = " . $_CB_database->Quote( $confirmEmail )
+			);
+		} else {
+			$_CB_database->setQuery( "SELECT id FROM #__users"
+			. "\n WHERE email = " . $_CB_database->Quote( $confirmEmail )
+			);
+		}
 		$user_id	=	$_CB_database->loadResult();
-		if ( ( ! $user_id ) || ( ! $checkusername ) || ( ! $confirmEmail ) ) {
+		if ( ! $user_id ) {
 			cbRedirect( cbSef( 'index.php?option=' . $option . '&amp;task=lostPassword' . ( $Itemid ? '&amp;Itemid=' . (int) $Itemid : '' ), false ), _ERROR_PASS );
 		}
-	
+
 		$newpass = cbMakeRandomString( 8, true );		// should be $user->setRandomPassword() but as this whole function needs to be redone to require clicking link for new password change, let's leave it for now.
 		$message = str_replace( '\n', "\n", sprintf( _UE_NEWPASS_MSG, $checkusername, $_live_site, $newpass ) );
 		$subject = sprintf( _UE_NEWPASS_SUB, $checkusername );
-	
+
 		$_PLUGINS->trigger( 'onBeforeNewPassword', array( $user_id, &$newpass, &$subject, &$message ));
 		if ($_PLUGINS->is_errors()) {
 			cbRedirect( cbSef("index.php?option=$option&amp;task=lostPassword".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $_PLUGINS->getErrorMSG(), 'error' );
 			return;
 		}
-	
+
 		$cbNotification = new cbNotification();
 		$res	=	$cbNotification->sendFromSystem($user_id,$subject,$message);
 
@@ -1257,6 +901,8 @@ function sendNewPass( $option ) {
 		} else {
 			cbRedirect( cbSef("index.php?option=$option&amp;task=done".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ),_UE_NEWPASS_FAILED );
 		}
+	} else {
+		cbRedirect( cbSef("index.php?option=$option&amp;task=done".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), _UE_NEWPASS_FAILED );
 	}
 }
 
@@ -1294,7 +940,7 @@ function registerForm( $option, $emailpass, $regErrorMSG = null ) {
 	} else {
 		$null							=	null;
 		HTML_comprofiler::registerForm( $option, $emailpass, $userComplete, $null, $regErrorMSG );
-	}		
+	}
 }
 
 function saveRegistration( $option ) {
@@ -1585,7 +1231,7 @@ function login( $username=null, $passwd2=null ) {
 	$message			=	trim( cbGetParam( $_POST, 'message', 0 ) );
 
 	$loginType			=	( isset( $ueConfig['login_type'] ) ? $ueConfig['login_type'] : 0 );
-	
+
 	// Do the login including all authentications and event firing:
 	cbimport( 'cb.authentication' );
 	$cbAuthenticate		=	new CBAuthentication();
@@ -1612,7 +1258,7 @@ function login( $username=null, $passwd2=null ) {
 
 function logout() {
 	global $_POST, $_CB_framework, $_CB_database, $_PLUGINS;
-	
+
 	$return					=	trim( stripslashes( cbGetParam( $_POST, 'return', null ) ) );
 	if ( cbStartOfStringMatch( $return, 'B:' ) ) {
 		$return				=	base64_decode( substr( $return, 2 ) );
@@ -1620,7 +1266,7 @@ function logout() {
 		$return				=	cbGetParam( $arrToClean, 'B', '' );
 	}
 	$message				=	trim( cbGetParam( $_POST, 'message', 0 ) );
-	
+
 	if ($return || $message) {
 	    $spoofCheckOk		=	false;
 	    if ( cbSpoofCheck( 'logout', 'POST', 2 ) ) {
@@ -1655,7 +1301,7 @@ function logout() {
 }
 function confirm( $confirmcode ) {
 	global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS;
-	
+
 	if( $_CB_framework->myId() < 1 ) {
 		$unscrambledId						=	moscomprofilerUser::getUserIdFromActivationCode( $confirmcode );
 		if ( $unscrambledId ) {
@@ -1692,7 +1338,7 @@ function confirm( $confirmcode ) {
 		}
 		// this is the error case where the URL is simply not right:
 		cbNotAuth();
-		return;			
+		return;
 	} else {
 		// this is the case where the user is already logged in (mostly test-cases):
 		echo '<div class="error">' . _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !</div>";
@@ -1748,7 +1394,7 @@ function approveImage() {
 
 function reportUser($option,$form=1,$uid=0) {
 	global $_CB_framework, $_CB_database, $ueConfig, $Itemid, $_POST;
-	
+
 	if($ueConfig['allowUserReports']==0) {
 			echo _UE_FUNCTIONALITY_DISABLED;
 			exit();
@@ -1762,23 +1408,23 @@ function reportUser($option,$form=1,$uid=0) {
 	} else {
 		// simple spoof check security
 		cbSpoofCheck( 'reportUserForm' );
-		
+
 		$row = new moscomprofilerUserReport( $_CB_database );
-		
+
 		if (!$row->bind( $_POST )) {
 			cbRedirect( cbSef("index.php?option=$option&amp;task=reportUser".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $row->getError(), 'error' );
 			return;
 		}
-	
+
 		_cbMakeHtmlSafe($row);			//TBD: remove this: not urgent but isn't right
-	
+
 		$row->reportedondate = date("Y-m-d H:i:s");
-	
+
 		if (!$row->check()) {
 			cbRedirect( cbSef("index.php?option=$option&amp;task=reportUser".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $row->getError(), 'error' );
 			return;
 		}
-	
+
 		if (!$row->store()) {
 			cbRedirect( cbSef("index.php?option=$option&amp;task=reportUser".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $row->getError(), 'error' );
 			return;
@@ -1793,7 +1439,7 @@ function reportUser($option,$form=1,$uid=0) {
 
 function banUser( $option, $uid, $form=1, $act=1 ) {
 	global $_CB_framework, $_CB_database, $ueConfig, $_POST;
-	
+
 	$isModerator=isModerator( $_CB_framework->myId() );
 	if ( ( $_CB_framework->myId() < 1 ) || ( $uid < 1 ) )  {
 			cbNotAuth();
@@ -1981,13 +1627,13 @@ function rejectUser($uids) {
 			echo _UE_FUNCTIONALITY_DISABLED;
 			exit();
 	}
-	
+
 	$isModerator=isModerator( $_CB_framework->myId() );
 	if (!$isModerator){
 		cbNotAuth();
 		return;
 	}
-	
+
 	$cbNotification= new cbNotification();
 	foreach($uids AS $uid) {
 		$query = "SELECT * FROM #__comprofiler c, #__users u WHERE c.id=u.id AND c.id = " . (int) $uid;
@@ -2027,8 +1673,8 @@ function pendingApprovalUsers($option) {
 	."\n FROM #__users u, #__comprofiler c "
 	."\n WHERE u.id=c.id AND c.approved=0 AND c.confirmed=1" );
 	$rows = $_CB_database->loadObjectList();
-	
-	HTML_comprofiler::pendingApprovalUsers($option, $rows);	
+
+	HTML_comprofiler::pendingApprovalUsers($option, $rows);
 }
 
 //Connections
@@ -2037,7 +1683,7 @@ function addConnection($userid,$connectionid,$umsg=null) {
 	global $_CB_framework, $ueConfig;
 
 	$andItemid = getCBprofileItemid(true);
-		
+
 	if(!$ueConfig['allowConnections']) {
 		echo _UE_FUNCTIONALITY_DISABLED;
 		return;
@@ -2067,7 +1713,7 @@ function removeConnection( $userid, $connectionid ) {
 	}
 	$cbCon		=	new cbConnection( $userid );
 	if ( ! $cbCon->removeConnection( $userid, $connectionid ) ) {
-		$msg	=	$cbCon->getErrorMSG(); 
+		$msg	=	$cbCon->getErrorMSG();
 	} else {
 		$msg	=	$cbCon->getUserMSG();
 	}
@@ -2099,7 +1745,7 @@ function denyConnection( $userid, $connectionid ) {
 
 function acceptConnection($userid,$connectionid) {
 	global $_CB_framework, $ueConfig;
-	
+
 	if(!$ueConfig['allowConnections']) {			// do not test, needed if rules changed! || !$ueConfig['useMutualConnections']
 		echo _UE_FUNCTIONALITY_DISABLED;
 		return;
@@ -2108,10 +1754,10 @@ function acceptConnection($userid,$connectionid) {
 		cbNotAuth();
 		return;
 	}
-	
+
 	$cbCon=new cbConnection($userid);
 	$cbCon->acceptConnection($userid,$connectionid);
-	
+
 	echo "<script type=\"text/javascript\"> alert('".addslashes($cbCon->getUserMSG())."'); window.history.go(-1); </script>\n";			//TBD solve this as a redirect to ???
 }
 
@@ -2126,9 +1772,9 @@ function manageConnections($userid) {
 		cbNotAuth();
 		return;
 	}
-	
+
 	$cbCon			=	new cbConnection( $userid );
-	
+
 	$connections	=	$cbCon->getActiveConnections( $userid );
 	$tabs			=	new cbTabs( 0, $_CB_framework->getUi() );
 	$tabs->element	=	'';
@@ -2137,7 +1783,7 @@ function manageConnections($userid) {
 	$perpage		=	20;		//TBD unhardcode and get the code below better
 	$total			=	$cbCon->getConnectionsCount( $userid, true );
 
-	if ( $pagingParams["connections_limitstart"] === null ) { 
+	if ( $pagingParams["connections_limitstart"] === null ) {
 		$pagingParams["connections_limitstart"]	=	0;
 	}
 	if ( $pagingParams["connections_limitstart"] > $total ) {
@@ -2150,14 +1796,14 @@ function manageConnections($userid) {
 
 	$connecteds		=	$cbCon->getConnectedToMe( $userid );
 
-	HTML_comprofiler::manageConnections( $connections, $actions, $total, $tabs, $pagingParams, $perpage, $connecteds );	
+	HTML_comprofiler::manageConnections( $connections, $actions, $total, $tabs, $pagingParams, $perpage, $connecteds );
 }
 
 function saveConnections($connectionids) {
 	global $_CB_framework, $ueConfig, $_POST;
-	
+
 	$andItemid = getCBprofileItemid();
-	
+
 	// simple spoof check security
 	cbSpoofCheck( 'manageConnections' );
 
@@ -2196,7 +1842,7 @@ function processConnectionActions($connectionids) {
 		return;
 	}
 	$cbCon	=	new cbConnection( $_CB_framework->myId() );
-	
+
 	if (is_array($connectionids)) {
 		foreach($connectionids AS $cid) {
 			$action		=	cbGetParam( $_POST, $cid . 'action' );
@@ -2386,5 +2032,5 @@ function processConnectionActions($connectionids) {
   
  } 
  /* End NxtLvl Mod */ 
- 
+
 ?>
