@@ -1,7 +1,7 @@
 <?php
 /**
 * Joomla Community Builder User Plugin: plug_nextlvlconfirm
-* @version 1.0.0
+* @version 1.1.0
 * @package plug_nxtlvlconfirm
 * @subpackage nxtlvlconfirm.xml
 * @author John Wicks (Gh0st)
@@ -16,7 +16,8 @@ if ( ! ( defined( '_VALID_CB' ) || defined( '_JEXEC' ) || defined( '_VALID_MOS' 
 global $_PLUGINS;
 $_PLUGINS->registerFunction('onUserActive', 'nxtlvlOnUserActive', 'plug_nxtlvlconfirm');
 $_PLUGINS->registerFunction('onBeforeUserActive', 'nxtlvlOnBeforeUserActive', 'plug_nxtlvlconfirm');
-$_PLUGINS->registerFunction('onBeforeUserUpdate', 'nxtlvlBeforeUserUpdate', 'plug_nxtlvlconfirm');
+//$_PLUGINS->registerFunction('onBeforeUserUpdate', 'nxtlvlOnBeforeUserUpdate', 'plug_nxtlvlconfirm');
+//$_PLUGINS->registerFunction('onAfterUserRegistrationMailsSent', 'nxtlvlOnAfterUserRegistrationMailsSent', 'plug_nxtlvlconfirm');
 
 /**
  * NextLevel Confirmation Class.
@@ -135,7 +136,9 @@ class plug_nxtlvlconfirm extends cbTabHandler {
 	* @param 
 	* @returns 
 	*/
-	function nxtlvlBeforeUserUpdate(&$row, &$rowExtras) {
+	function nxtlvlOnBeforeUserUpdate(&$row, &$rowExtras) {
+		$ret_val = true;
+		return $ret_val;
 	} // end function
 	
 	/**
@@ -169,7 +172,11 @@ class plug_nxtlvlconfirm extends cbTabHandler {
 				if ( $row->cbactivation ) {
 					$confirmCode = $row->cbactivation;
 				} else {
-					$confirmCode = '';
+					if ($row->cb_nxtlvlactivation ){
+						$confirmCode = $row->cb_nxtlvlactivation;
+					} else {
+						$confirmCode = '';	
+					}
 				}
 				$confirmLink = " \n".$_CB_framework->getCfg( 'live_site' )."/index.php?option=com_comprofiler&task=nxtlvlconfirm&confirmcode=".$confirmCode." \n";
 				$denyLink = " \n".$_CB_framework->getCfg( 'live_site' )."/index.php?option=com_comprofiler&task=nxtlvldeny&confirmcode=".$confirmCode." \n";
@@ -216,5 +223,11 @@ class plug_nxtlvlconfirm extends cbTabHandler {
 	 	return $uDetails;
 	}// end function
 	
+	/**
+	*/
+	function nxtlvlOnAfterUserRegistrationMailsSent( &$user, &$userComplete, &$messageToUser, $confirmationCode, $requireAdminApproval, $extras ){
+		$ret_val = true;
+		return $ret_val;
+	}
 } // end of getNxtLvlTab class
 ?>
