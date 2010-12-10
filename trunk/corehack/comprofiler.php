@@ -1,7 +1,7 @@
 <?php
 /**
 * Joomla/Mambo Community Builder
-* @version $Id: comprofiler.php 1150 2010-07-06 14:44:25Z beat $
+* @version $Id: comprofiler.php 1264 2010-11-19 00:46:41Z beat $
 * @package Community Builder
 * @subpackage comprofiler.php
 * @author JoomlaJoe and Beat
@@ -56,7 +56,7 @@ $_CB_framework->cbset( '_ui', 1 );	// we're in 1: frontend, 2: admin back-end
 
 if($_CB_framework->getCfg( 'debug' )) {
 	ini_set('display_errors',true);
-	error_reporting(E_ALL);
+	error_reporting(E_ALL );	// | E_STRICT );
 }
 
 cbimport( 'language.front' );
@@ -142,17 +142,17 @@ switch( $task ) {
 	confirm( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
 	break;
 
-/* NxtLvl Mod */ 
-	 case "nxtlvlconfirm": 
-	 $oldignoreuserabort = ignore_user_abort(true); 
-	 nxtlvlconfirm( cbGetParam( $_GET, 'confirmcode', '1' ) ); // mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam... 
-	 break; 
-	  
-	 case "nxtlvldeny": 
-	 $oldignoreuserabort = ignore_user_abort(true); 
-	 nxtlvldeny( cbGetParam( $_GET, 'confirmcode', '1' ) ); // mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam... 
-	 break; 
-/* End NxtLvl Mod */ 
+/* NxtLvl Mod */
+	case "nxtlvlconfirm":
+	$oldignoreuserabort = ignore_user_abort(true);
+	nxtlvlconfirm( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
+	break;
+	
+	case "nxtlvldeny":
+	$oldignoreuserabort = ignore_user_abort(true);
+	nxtlvldeny( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
+	break;
+/* End NxtLvl Mod */
 
 	case "moderateImages":
 	case "moderateimages":
@@ -1863,174 +1863,173 @@ function processConnectionActions($connectionids) {
 	return;
 }
 
-/* NxtLvl Mod */ 
- function nxtlvlconfirm($confirmcode){ 
-         global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS; 
-  
-         if(!$confirmcode){ 
-                 return; 
-         } 
-          
-         if( $_CB_framework->myId() < 1) { 
-                 $lengthConfirmcode = strlen($confirmcode); 
-                 if ($lengthConfirmcode == ( 3+32+8 ) ) { 
-                         $scrambleSeed   = (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7)); 
-                         $unscrambledId  = $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) ); 
-                         $query = "SELECT * FROM #__comprofiler c, #__users u " 
-                                         . " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id"; 
-                 } else { 
-                     /* TODO: Possibly someone trying to Spoof the activation code */ 
-                         cbNotAuth(); 
-                         return;                  
-                 } 
-                 $_CB_database->setQuery($query); 
-                 $user = $_CB_database->loadAssoc();      
-  
-                 if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) { 
-                         echo "Error unable to find user. Manual update to NxtLevel Access might be required. Please contact Website Administrator"; 
-                         return; 
-                 } 
-                 $query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm"); 
-                 $_CB_database->setQuery($query); 
-                 $raw = $_CB_database->loadRow(); 
-                 if(!$raw){ 
-                         echo "Error getting params for NxtLevel Plugin"; 
-                         return; 
-                 }  
-                                          
-                 $nxtlvlparams = new cbParamsBase($raw); 
-                 $nxtlvlparams->loadFromDB('nxtlvlconfirm'); 
-                  
-                 $query = "SELECT id FROM #__core_acl_aro_groups WHERE name= ". $_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup')); 
-                 $_CB_database->setQuery($query); 
-                 $nxtlvlGroup = $_CB_database->loadResult(); 
-                  
-                 if(!$nxtlvlGroup){ 
-                         echo "Error finding NxtLevel Group"; 
-                         return; 
-                 } 
-                                  
-                 $query = "UPDATE #__users SET gid = ".$nxtlvlGroup.", usertype=".$_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup'))." WHERE id=" . (int) $user['id']; 
-                 $_CB_database->setQuery($query); 
-                 $_CB_database->query(); 
-                 if(!$_CB_database->getAffectedRows()){ 
-                         echo "Error updating User to NxtLevel Group"; 
-                         return; 
-                 } 
-                  
-                 $query = "SELECT id FROM #__core_acl_aro WHERE section_value='users' AND value=". (int)$user['id']; 
-                 $_CB_database->setQuery($query); 
-                 $_CB_database->query(); 
-                 $nxtlvlARO = $_CB_database->loadResult(); 
-                 if(!$nxtlvlARO){ 
-                         echo "Error finding ARO value for NxtLevel user"; 
-                         return; 
-                 } 
-                                  
-                 $query = "UPDATE #__core_acl_groups_aro_map SET group_id= ".$nxtlvlGroup." WHERE aro_id=" . $nxtlvlARO; 
-                 $_CB_database->setQuery($query); 
-                 $_CB_database->query(); 
-                 if(!$_CB_database->getAffectedRows()){ 
-                         echo "Error updating Group Map to NxtLevel Group"; 
-                         return; 
-                 } 
-                  
-                 $cbNotification = new cbNotification(); 
-                 $myUser =&      CBuser::getInstance( $user['id'] ); 
-                  
-                 $extraStrings = array(); 
-                 $extraStrings['sitename'] = $_CB_framework->getCfg('sitename'); 
-                  
-                 $watchField = $nxtlvlparams->get('nxtlvlWatchFieldId'); 
-                 $extraStrings['nxtlvlfield'] = $user[$watchField]; 
-                 $extraStrings['name'] = $user['firstname']; 
-                 $extraStrings['br'] = "\r\n"; 
-                                  
-                 $subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedSubject'),true,true,$extraStrings); 
-                 $body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedBody'),true,true,$extraStrings); 
-                  
-                 $res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true); 
-                 if(!$res){ 
-                         $messagesToUser = "User Upgraded to NxtLevel but unable to send NxtLevel Notification message to user."; 
-                 }else{ 
-                         $messagesToUser = "User Upgraded to NxtLevel and NxtLevel Notification message sent to user."; 
-                 } 
-                  
-                 echo "\n<div>" . $messagesToUser . "</div>\n"; 
-  
-         } else { 
-                 echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />"; 
-                 return; 
-         } 
-  
- } 
-  
- function nxtlvldeny($confirmcode){ 
-         global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS; 
-          
-                 if(!$confirmcode){ 
-                 return; 
-         } 
-          
-         if( $_CB_framework->myId() < 1) { 
-                 $lengthConfirmcode = strlen($confirmcode); 
-                 if ($lengthConfirmcode == ( 3+32+8 ) ) { 
-                         $scrambleSeed   = (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7)); 
-                         $unscrambledId  = $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) ); 
-                         $query = "SELECT * FROM #__comprofiler c, #__users u " 
-                                         . " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id"; 
-                 } else { 
-                     /* TODO: Possibly someone trying to Spoof the activation code */ 
-                         cbNotAuth(); 
-                         return;                  
-                 } 
-                 $_CB_database->setQuery($query); 
-                 $user = $_CB_database->loadAssoc();      
-  
-                 if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) { 
-                         echo "Error unable to find user. Manual NxtLevel failure notification might be required. Please contact Website Administrator."; 
-                         return; 
-                 } 
-                 $query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm"); 
-                 $_CB_database->setQuery($query); 
-                 $raw = $_CB_database->loadRow(); 
-                 if(!$raw){ 
-                         echo "Error getting params for NxtLevel Plugin. Manual NxtLevel failure notification might be required. Please contact Website Administrator."; 
-                         return; 
-                 }  
-                                          
-                 $nxtlvlparams = new cbParamsBase($raw); 
-                 $nxtlvlparams->loadFromDB('nxtlvlconfirm'); 
-                  
-                 $cbNotification = new cbNotification(); 
-                 $myUser =&      CBuser::getInstance( $user['id'] ); 
-                  
-                 $extraStrings = array(); 
-                 $extraStrings['sitename'] = $_CB_framework->getCfg('sitename'); 
-                  
-                 $watchField = $nxtlvlparams->get('nxtlvlWatchFieldId'); 
-                 $extraStrings['nxtlvlfield'] = $user[$watchField]; 
-                 $extraStrings['name'] = $user['firstname']; 
-                 $extraStrings['br'] = "\r\n"; 
-                                  
-                 $subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedSubject'),true,true,$extraStrings); 
-                 $body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedBody'),true,true,$extraStrings); 
-                  
-                 $res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true); 
-                 if(!$res){ 
-                         $messagesToUser = "Error - Unable to send NxtLevel Notification message to user."; 
-                 }else{ 
-                         $messagesToUser = "NxtLevel Correction Notification message sent to user."; 
-                 } 
-                  
-                 echo "\n<div>" . $messagesToUser . "</div>\n"; 
-  
-         } else { 
-                 echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />"; 
-                 return; 
-         } 
-  
- } 
- /* End NxtLvl Mod */ 
+/* NxtLvl Mod */
+function nxtlvlconfirm($confirmcode){
+	global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS;
 
+	if(!$confirmcode){
+		return;
+	}
+	
+	if( $_CB_framework->myId() < 1) {
+		$lengthConfirmcode = strlen($confirmcode);
+		if ($lengthConfirmcode == ( 3+32+8 ) ) {
+			$scrambleSeed	= (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7));
+			$unscrambledId	= $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) );
+			$query = "SELECT * FROM #__comprofiler c, #__users u "
+					. " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id";
+		} else {
+		    /* TODO: Possibly someone trying to Spoof the activation code */
+			cbNotAuth();
+			return;			
+		}
+		$_CB_database->setQuery($query);
+		$user = $_CB_database->loadAssoc();	
+
+		if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) {
+			echo "Error unable to find user. Manual update to NxtLevel Access might be required. Please contact Website Administrator";
+			return;
+		}
+		$query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm");
+		$_CB_database->setQuery($query);
+		$raw = $_CB_database->loadRow();
+		if(!$raw){
+			echo "Error getting params for NxtLevel Plugin";
+			return;
+		} 
+					
+		$nxtlvlparams = new cbParamsBase($raw);
+		$nxtlvlparams->loadFromDB('nxtlvlconfirm');
+		
+		$query = "SELECT id FROM #__core_acl_aro_groups WHERE name= ". $_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup'));
+		$_CB_database->setQuery($query);
+		$nxtlvlGroup = $_CB_database->loadResult();
+		
+		if(!$nxtlvlGroup){
+			echo "Error finding NxtLevel Group";
+			return;
+		}
+				
+		$query = "UPDATE #__users SET gid = ".$nxtlvlGroup.", usertype=".$_CB_database->Quote($nxtlvlparams->get('nxtlvlOnConfirmedGroup'))." WHERE id=" . (int) $user['id'];
+		$_CB_database->setQuery($query);
+		$_CB_database->query();
+		if(!$_CB_database->getAffectedRows()){
+			echo "Error updating User to NxtLevel Group";
+			return;
+		}
+		
+		$query = "SELECT id FROM #__core_acl_aro WHERE section_value='users' AND value=". (int)$user['id'];
+		$_CB_database->setQuery($query);
+		$_CB_database->query();
+		$nxtlvlARO = $_CB_database->loadResult();
+		if(!$nxtlvlARO){
+			echo "Error finding ARO value for NxtLevel user";
+			return;
+		}
+				
+		$query = "UPDATE #__core_acl_groups_aro_map SET group_id= ".$nxtlvlGroup." WHERE aro_id=" . $nxtlvlARO;
+		$_CB_database->setQuery($query);
+		$_CB_database->query();
+		if(!$_CB_database->getAffectedRows()){
+			echo "Error updating Group Map to NxtLevel Group";
+			return;
+		}
+		
+		$cbNotification = new cbNotification();
+		$myUser =&	CBuser::getInstance( $user['id'] );
+		
+		$extraStrings = array();
+		$extraStrings['sitename'] = $_CB_framework->getCfg('sitename');
+		
+		$watchField = $nxtlvlparams->get('nxtlvlWatchFieldId');
+		$extraStrings['nxtlvlfield'] = $user[$watchField];
+		$extraStrings['name'] = $user['firstname'];
+		$extraStrings['br'] = "\r\n";
+				
+		$subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedSubject'),true,true,$extraStrings);
+		$body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnConfirmedBody'),true,true,$extraStrings);
+		
+		$res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true);
+		if(!$res){
+			$messagesToUser = "User Upgraded to NxtLevel but unable to send NxtLevel Notification message to user.";
+		}else{
+			$messagesToUser = "User Upgraded to NxtLevel and NxtLevel Notification message sent to user.";
+		}
+		
+		echo "\n<div>" . $messagesToUser . "</div>\n";
+
+	} else {
+		echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />";
+		return;
+	}
+
+}
+
+function nxtlvldeny($confirmcode){
+	global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS;
+	
+		if(!$confirmcode){
+		return;
+	}
+	
+	if( $_CB_framework->myId() < 1) {
+		$lengthConfirmcode = strlen($confirmcode);
+		if ($lengthConfirmcode == ( 3+32+8 ) ) {
+			$scrambleSeed	= (int) hexdec(substr( md5 ( $_CB_framework->getCfg( 'secret' ) . $_CB_framework->getCfg( 'db' ) ), 0, 7));
+			$unscrambledId	= $scrambleSeed ^ ( (int) hexdec(substr( $confirmcode, 3+32 ) ) );
+			$query = "SELECT * FROM #__comprofiler c, #__users u "
+					. " WHERE c.id = " . (int) $unscrambledId . " AND c.cb_nxtlvlactivation = '" . cbGetEscaped($confirmcode) . "' AND c.id=u.id";
+		} else {
+		    /* TODO: Possibly someone trying to Spoof the activation code */
+			cbNotAuth();
+			return;			
+		}
+		$_CB_database->setQuery($query);
+		$user = $_CB_database->loadAssoc();	
+
+		if ( ( $user === null ) || ( count( $user ) == 0 ) || ($user['approved'] ==0) ) {
+			echo "Error unable to find user. Manual NxtLevel failure notification might be required. Please contact Website Administrator.";
+			return;
+		}
+		$query = "SELECT params FROM #__comprofiler_plugin WHERE element=" . $_CB_database->Quote("nxtlvlconfirm");
+		$_CB_database->setQuery($query);
+		$raw = $_CB_database->loadRow();
+		if(!$raw){
+			echo "Error getting params for NxtLevel Plugin. Manual NxtLevel failure notification might be required. Please contact Website Administrator.";
+			return;
+		} 
+					
+		$nxtlvlparams = new cbParamsBase($raw);
+		$nxtlvlparams->loadFromDB('nxtlvlconfirm');
+		
+		$cbNotification = new cbNotification();
+		$myUser =&	CBuser::getInstance( $user['id'] );
+		
+		$extraStrings = array();
+		$extraStrings['sitename'] = $_CB_framework->getCfg('sitename');
+		
+		$watchField = $nxtlvlparams->get('nxtlvlWatchFieldId');
+		$extraStrings['nxtlvlfield'] = $user[$watchField];
+		$extraStrings['name'] = $user['firstname'];
+		$extraStrings['br'] = "\r\n";
+				
+		$subject = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedSubject'),true,true,$extraStrings);
+		$body = $myUser->replaceUserVars($nxtlvlparams->get('nxtlvlOnFailedBody'),true,true,$extraStrings);
+		
+		$res = $cbNotification->sendUserEmail((int)$user['id'],62,$subject,$body, true);
+		if(!$res){
+			$messagesToUser = "Error - Unable to send NxtLevel Notification message to user.";
+		}else{
+			$messagesToUser = "NxtLevel Correction Notification message sent to user.";
+		}
+		
+		echo "\n<div>" . $messagesToUser . "</div>\n";
+
+	} else {
+		echo _UE_NOT_AUTHORIZED." :<br /><br />"._UE_DO_LOGOUT." !<br />";
+		return;
+	}
+
+}
+/* End NxtLvl Mod */
 ?>
