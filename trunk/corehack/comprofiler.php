@@ -1,7 +1,7 @@
 <?php
 /**
 * Joomla/Mambo Community Builder
-* @version $Id: comprofiler.php 1264 2010-11-19 00:46:41Z beat $
+* @version $Id: comprofiler.php 1439 2011-02-13 01:21:13Z beat $
 * @package Community Builder
 * @subpackage comprofiler.php
 * @author JoomlaJoe and Beat
@@ -465,7 +465,7 @@ function userSave( $option, $uid ) {
 
 	// Update lastupdatedate of profile by user:
 	if ( $_CB_framework->myId() == $uid ) {
-		$userComplete->lastupdatedate	=	date( 'Y-m-d H:i:s' );
+		$userComplete->lastupdatedate	=	$_CB_framework->dateDbOfNow();
 	}
 
 	// Store new user state:
@@ -563,7 +563,7 @@ function userAvatar( $option, $uid, $submitvalue) {
 			$_CB_database->setQuery("UPDATE #__comprofiler SET avatar='" . $_CB_database->getEscaped($newFileName) . "', avatarapproved=0 WHERE id=" . (int) $row->id);
 			$redMsg			=	_UE_UPLOAD_PEND_APPROVAL;
 		} else {
-			$_CB_database->setQuery("UPDATE #__comprofiler SET avatar='" . $_CB_database->getEscaped($newFileName) . "', avatarapproved=1, lastupdatedate='".date('Y-m-d\TH:i:s')."' WHERE id=" . (int) $row->id);
+			$_CB_database->setQuery("UPDATE #__comprofiler SET avatar='" . $_CB_database->getEscaped($newFileName) . "', avatarapproved=1, lastupdatedate=". $_CB_database->Quote( $_CB_framework->dateDbOfNow() ) . " WHERE id=" . (int) $row->id);
 			$redMsg			=	_UE_UPLOAD_SUCCESSFUL;
 		}
 
@@ -587,7 +587,7 @@ function userAvatar( $option, $uid, $submitvalue) {
 			cbRedirectToProfile( $row->id, _UE_UPLOAD_ERROR_CHOOSE, 'userAvatar' );
 		}
 		$_CB_database->setQuery( "UPDATE #__comprofiler SET avatar = " . $_CB_database->Quote( 'gallery/' . $newAvatar )
-								. ", avatarapproved=1, lastupdatedate = " . $_CB_database->Quote( date('Y-m-d H:i:s') )
+								. ", avatarapproved=1, lastupdatedate = " . $_CB_database->Quote( $_CB_framework->dateDbOfNow() )
 								. " WHERE id = " . (int) $row->id);
 		if( ! $_CB_database->query() ) {
 			$msg	=	_UE_USER_PROFILE_NOT;
@@ -602,7 +602,7 @@ function userAvatar( $option, $uid, $submitvalue) {
 
 		if ( $row->avatar != null && $row->avatar != "" ) {
 			deleteAvatar( $row->avatar );
-			$_CB_database->setQuery("UPDATE  #__comprofiler SET avatar=null, avatarapproved=1, lastupdatedate='" . date('Y-m-d H:i:s') . "' WHERE id=" . (int) $row->id);
+			$_CB_database->setQuery("UPDATE  #__comprofiler SET avatar=null, avatarapproved=1, lastupdatedate=" . $_CB_database->Quote( $_CB_framework->dateDbOfNow() ) . " WHERE id=" . (int) $row->id);
 			$_CB_database->query();
 		}
 
@@ -1368,7 +1368,7 @@ function approveImage() {
 	$cbNotification = new cbNotification();
 	if($act=='1') {
 		foreach ($avatars AS $avatar) {
-			$query = "UPDATE #__comprofiler SET avatarapproved = 1, lastupdatedate='".date('Y-m-d H:i:s')."' WHERE id = " . (int) $avatar;
+			$query = "UPDATE #__comprofiler SET avatarapproved = 1, lastupdatedate=". $_CB_database->Quote( $_CB_framework->dateDbOfNow() ) ." WHERE id = " . (int) $avatar;
 			$_CB_database->setQuery($query);
 			$_CB_database->query();
 			$cbNotification->sendFromSystem( (int) $avatar, _UE_IMAGEAPPROVED_SUB, _UE_IMAGEAPPROVED_MSG );
