@@ -126,6 +126,7 @@
 = Test the Confirmation Process =
 <p>
 <ol>
-<li></li>
+<li>Create a test account using the normal CB login process. Confirm the email address by clicking the CB supplied link.</li>
+<li>Once confirmed, the test user should receive a confirmation message. The administrative contact you set, should also get a message asking for confirmation of the secondary identifier. Click the confirm link in that email and the test user should be upgraded to the group you specified in the settings.</li>
 </ol>
 </p>
