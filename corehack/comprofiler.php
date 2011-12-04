@@ -1,7 +1,7 @@
 <?php
 /**
 * Joomla/Mambo Community Builder
-* @version $Id: comprofiler.php 1439 2011-02-13 01:21:13Z beat $
+* @version $Id: comprofiler.php 1596 2011-10-28 21:57:51Z beat $
 * @package Community Builder
 * @subpackage comprofiler.php
 * @author JoomlaJoe and Beat
@@ -30,6 +30,12 @@ if ( $memMax ) {
 	}
 	if ( $memMax < 32000000 ) {
 		@ini_set( 'memory_limit', '32M' );
+	}
+	if ( $memMax < 64000000 ) {
+		@ini_set( 'memory_limit', '64M' );
+	}
+	if ( $memMax < 80000000 ) {
+		@ini_set( 'memory_limit', '80M' );
 	}
 }
 
@@ -328,7 +334,12 @@ function sendUserEmail( $option, $toid, $fromid, $subject, $message ) {
 	cbSpoofCheck( 'emailUser' );
 	$errorMsg	=	cbAntiSpamCheck( false );
 
-	if (($_CB_framework->myId() == 0) || ($_CB_framework->myId() != $fromid) || ( ! $toid ) || ($ueConfig['allow_email_display']!=1 && $ueConfig['allow_email_display']!=3)) {
+	if ( ( $_CB_framework->myId() == 0 )
+		|| ( $_CB_framework->myId() != $fromid )
+		|| ( ! $toid )
+		|| ( ( $ueConfig['allow_email_display'] != 1 ) && ( $ueConfig['allow_email_display'] != 3 ) )
+		|| ( ! allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', userGID( $_CB_framework->myId() ) ) ) )
+	{
 		cbNotAuth();
 		return;
 	}
@@ -382,6 +393,11 @@ function sendUserEmail( $option, $toid, $fromid, $subject, $message ) {
 function emailUser($option,$uid) {
 	global $_CB_framework, $_CB_database, $ueConfig;
 	if (($_CB_framework->myId() == 0) || ($ueConfig['allow_email_display']!=1 && $ueConfig['allow_email_display']!=3)) {
+		cbNotAuth();
+		return;
+	}
+
+	if ( ! allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', userGID( $_CB_framework->myId() ) ) ) {
 		cbNotAuth();
 		return;
 	}
@@ -648,7 +664,7 @@ function & loadComprofilerUser( $uid ) {
 }
 
 function userProfile( $option, $uid, $submitvalue) {
-	global $_REQUEST, $ueConfig, $_CB_framework;
+	global $_REQUEST, $ueConfig, $_CB_framework, $_PLUGINS;
 	if ( isset( $_REQUEST['user'] ) ) {
 		if ( ! allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', userGID( $_CB_framework->myId() ) ) ) {
 			if (	( $_CB_framework->myId() < 1 )
@@ -677,6 +693,30 @@ function userProfile( $option, $uid, $submitvalue) {
 	if ( $user === null ) {
 		echo _UE_NOSUCHPROFILE;
 		return;
+	}
+
+	if ( cbGetParam( $_GET, 'reason' ) == 'canceledit' ) {
+		if ( $uid == 0 ) {
+			$Euid					=	$_CB_framework->myId();
+		} else {
+			$Euid					=	$uid;
+		}
+	
+		$msg						=	cbCheckIfUserCanPerformUserTask( $Euid, 'allowModeratorsUserEdit');
+		if ( ( $Euid != $_CB_framework->myId() ) && ( $msg === null ) ) {
+			// safeguard against missconfiguration of the above: also avoids lower-level users editing higher level ones:
+			$msg					=	checkCBpermissions( array( (int) $Euid ), 'edit', true );
+		}
+		if ( $msg ) {
+			echo $msg;
+			return;
+		}
+		$_PLUGINS->loadPluginGroup('user');
+		$results = $_PLUGINS->trigger( 'onAfterUserProfileEditCancel', array( &$user ) );
+		if ($_PLUGINS->is_errors()) {
+			echo "<script type=\"text/javascript\">alert(\"".$_PLUGINS->getErrorMSG()."\"); window.history.go(-1); </script>\n";
+			exit();
+		}
 	}
 
 	HTML_comprofiler::userProfile( $user, $option, $submitvalue);
@@ -778,7 +818,7 @@ function tabClass( $option, $task, $uid ) {
 }
 
 function usersList( $uid ) {
-	global $_CB_database, $_CB_framework, $ueConfig, $Itemid, $_PLUGINS, $_POST, $_REQUEST;
+	global $_CB_database, $_CB_framework, $ueConfig, $_PLUGINS, $_POST, $_REQUEST;
 
 	cbimport( 'cb.lists' );
 
@@ -801,7 +841,7 @@ function lostPassForm( $option ) {
 }
 
 function sendNewPass( $option ) {
-	global $_CB_framework, $_CB_database, $ueConfig, $Itemid, $_PLUGINS, $_POST;
+	global $_CB_framework, $_CB_database, $ueConfig, $_PLUGINS, $_POST;
 
 	// simple spoof check security
 	cbSpoofCheck( 'lostPassForm' );
@@ -812,6 +852,8 @@ function sendNewPass( $option ) {
 	// ensure no malicous sql gets past
 	$checkusername	=	trim( cbGetParam( $_POST, 'checkusername', '' ) );
 	$confirmEmail	=	trim( cbGetParam( $_POST, 'checkemail', ''    ) );
+
+	$Itemid		=	$_CB_framework->itemid();
 
 	$_PLUGINS->loadPluginGroup('user');
 	$_PLUGINS->trigger( 'onStartNewPassword', array( &$checkusername, &$confirmEmail ));
@@ -1217,6 +1259,10 @@ function login( $username=null, $passwd2=null ) {
     if ( !$username || !$passwd2 ) {
 		$username		=	trim( cbGetParam( $_POST, 'username', '' ) );
 		$passwd2		=	trim( cbGetParam( $_POST, 'passwd', '', _CB_ALLOWRAW ) );
+		if ( checkJversion() >=1 ) {
+			$username	=	stripslashes( $username );
+			$passwd2	=	stripslashes( $passwd2 );
+		}
     }
 	$rememberMe			=	cbGetParam( $_POST, 'remember' );
     $return				=	trim( stripslashes( cbGetParam( $_POST, 'return', null ) ) );
@@ -1393,7 +1439,7 @@ function approveImage() {
 }
 
 function reportUser($option,$form=1,$uid=0) {
-	global $_CB_framework, $_CB_database, $ueConfig, $Itemid, $_POST;
+	global $_CB_framework, $_CB_database, $ueConfig, $_POST;
 
 	if($ueConfig['allowUserReports']==0) {
 			echo _UE_FUNCTIONALITY_DISABLED;
@@ -1410,6 +1456,8 @@ function reportUser($option,$form=1,$uid=0) {
 		cbSpoofCheck( 'reportUserForm' );
 
 		$row = new moscomprofilerUserReport( $_CB_database );
+
+		$Itemid		=	$_CB_framework->itemid();
 
 		if (!$row->bind( $_POST )) {
 			cbRedirect( cbSef("index.php?option=$option&amp;task=reportUser".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), $row->getError(), 'error' );
@@ -1566,7 +1614,7 @@ function moderator(){
 
 
 function approveUser($uids) {
-	global $_CB_framework, $_CB_database, $ueConfig, $_PLUGINS, $Itemid;
+	global $_CB_framework, $_CB_database, $ueConfig, $_PLUGINS;
 
 	$andItemid = getCBprofileItemid();
 
@@ -1589,6 +1637,8 @@ function approveUser($uids) {
 	if ( ! isset( $ueConfig['emailpass'] ) ) {
 		$ueConfig['emailpass']	=	'0';
 	}
+
+	$Itemid		=	$_CB_framework->itemid();
 
 	foreach($uids AS $uid) {
 		$cbUser				=	CBuser::getInstance( (int) $uid );
@@ -2032,4 +2082,5 @@ function nxtlvldeny($confirmcode){
 
 }
 /* End NxtLvl Mod */
+
 ?>
