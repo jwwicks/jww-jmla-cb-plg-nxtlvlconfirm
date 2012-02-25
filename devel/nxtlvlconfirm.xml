@@ -2,16 +2,16 @@
 <!--
 /**
 * Joomla Community Builder User Plugin: plug_nextlvlconfirm
-* @version $Id$
-* @package plug_nxtlvlconfirm
-* @subpackage nxtlvlconfirm.xml
+* @version 1.2.0
+* @package com_comprofiler
+* @subpackage plug_nxtlvlconfirm
 * @author John Wicks (Gh0st)
 * @copyright (C) (Gh0st), GreatLittleBook Publishing Co., Inc
 * @license Limited http://www.gnu.org/copyleft/gpl.html GNU/GPL
 * @final 1.0
 */
 -->
-<cbinstall version="1.3.1" type="plugin" group="user">
+<cbinstall version="1.0" type="plugin" group="user">
 	<name>Next Level Confirmation</name>
 	<author>John W</author>
 	<creationDate>2010-12-09</creationDate>
@@ -19,7 +19,7 @@
 	<license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
 	<authorEmail>johnw@greatlittlebook.com</authorEmail>
 	<authorUrl>www.greatlittlebook.com</authorUrl>
-	<version>1.1.0</version>
+	<version>1.2.0</version>
 	<description>
 		This plugin is used to confirm a user via a User defined field value.
 		It sends a second level confirmation message to a specified recipient.
