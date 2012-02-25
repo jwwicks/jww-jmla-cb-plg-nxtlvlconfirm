@@ -1,9 +1,9 @@
 <?php
 /**
 * Joomla Community Builder User Plugin: plug_nextlvlconfirm
-* @version 1.1.0
-* @package plug_nxtlvlconfirm
-* @subpackage nxtlvlconfirm.xml
+* @version 1.2.0
+* @package com_comprofiler
+* @subpackage plug_nxtlvlconfirm
 * @author John Wicks (Gh0st)
 * @copyright (C) (Gh0st), GreatLittleBook Publishing Co., Inc
 * @license Limited http://www.gnu.org/copyleft/gpl.html GNU/GPL
