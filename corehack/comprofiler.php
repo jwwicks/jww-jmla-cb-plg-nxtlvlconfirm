@@ -1,7 +1,7 @@
 <?php
 /**
 * Joomla/Mambo Community Builder
-* @version $Id: comprofiler.php 1596 2011-10-28 21:57:51Z beat $
+* @version $Id: comprofiler.php 1753 2012-02-14 15:43:38Z beat $
 * @package Community Builder
 * @subpackage comprofiler.php
 * @author JoomlaJoe and Beat
@@ -151,6 +151,7 @@ switch( $task ) {
 /* NxtLvl Mod */
 	case "nxtlvlconfirm":
 	$oldignoreuserabort = ignore_user_abort(true);
+
 	nxtlvlconfirm( cbGetParam( $_GET, 'confirmcode', '1' ) );		// mambo 4.5.3h braindead: does intval of octal from hex in cbGetParam...
 	break;
 	
@@ -338,7 +339,7 @@ function sendUserEmail( $option, $toid, $fromid, $subject, $message ) {
 		|| ( $_CB_framework->myId() != $fromid )
 		|| ( ! $toid )
 		|| ( ( $ueConfig['allow_email_display'] != 1 ) && ( $ueConfig['allow_email_display'] != 3 ) )
-		|| ( ! allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', userGID( $_CB_framework->myId() ) ) ) )
+		|| ( ! CBuser::getMyInstance()->authoriseView( 'profile', $toid ) ) )
 	{
 		cbNotAuth();
 		return;
@@ -397,7 +398,7 @@ function emailUser($option,$uid) {
 		return;
 	}
 
-	if ( ! allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', userGID( $_CB_framework->myId() ) ) ) {
+	if ( ! CBuser::getMyInstance()->authoriseView( 'profile', $uid ) ) {
 		cbNotAuth();
 		return;
 	}
@@ -666,7 +667,7 @@ function & loadComprofilerUser( $uid ) {
 function userProfile( $option, $uid, $submitvalue) {
 	global $_REQUEST, $ueConfig, $_CB_framework, $_PLUGINS;
 	if ( isset( $_REQUEST['user'] ) ) {
-		if ( ! allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', userGID( $_CB_framework->myId() ) ) ) {
+		if ( ! CBuser::getMyInstance()->authoriseView( 'profile', $uid ) ) {
 			if (	( $_CB_framework->myId() < 1 )
 				&&	( ! ( ( ( $_CB_framework->getCfg( 'allowUserRegistration' ) == '0' )
 		   				    && ( ( ! isset($ueConfig['reg_admin_allowcbregistration']) ) || $ueConfig['reg_admin_allowcbregistration'] != '1' ) )
@@ -740,7 +741,7 @@ function tabClass( $option, $task, $uid ) {
 					$msg	=	checkCBpermissions( array( (int) $user->id ), 'edit', true );
 				}
 			} elseif ( ( $reason === 'profile' ) || ( $reason === 'list' ) ) {
-				if ( allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', userGID( $_CB_framework->myId() ) ) ) {
+				if ( CBuser::getMyInstance()->authoriseView( 'profile', $user->id ) ) {
 					$msg	=	null;
 				} else {
 					$msg	=	_UE_NOT_AUTHORIZED;
@@ -759,23 +760,6 @@ function tabClass( $option, $task, $uid ) {
 				return;
 			}
 		} else {
-/*
-		if (	( ! ( ( ( $_CB_framework->getCfg( 'allowUserRegistration' ) == '0' )
-		   				    && ( ( ! isset($ueConfig['reg_admin_allowcbregistration']) ) || $ueConfig['reg_admin_allowcbregistration'] != '1' ) )
-						)
-					)
-					&&
-					allowAccess( $ueConfig['allow_profileviewbyGID'], 'RECURSE', $_CB_framework->acl->get_group_id('Registered','ARO') )
-			) {
-				$msg		=	_UE_REGISTERFORPROFILEVIEW;
-				echo $msg;
-				return;
-			} else {
-				$msg		=	_UE_NOT_AUTHORIZED;
-				echo $msg;
-				return;
-			}
-*/
 			$msg			=	_UE_NOT_AUTHORIZED;
 			echo $msg;
 			return;
@@ -844,10 +828,11 @@ function sendNewPass( $option ) {
 	global $_CB_framework, $_CB_database, $ueConfig, $_PLUGINS, $_POST;
 
 	// simple spoof check security
+	checkCBPostIsHTTPS();
 	cbSpoofCheck( 'lostPassForm' );
 	cbRegAntiSpamCheck();
 
-	$usernameExists	=	( ( isset( $ueConfig['login_type'] ) ) && ( $ueConfig['login_type'] < 2 ) );
+	$usernameExists	=	( ( isset( $ueConfig['login_type'] ) ) && ( $ueConfig['login_type'] != 2 ) );
 
 	// ensure no malicous sql gets past
 	$checkusername	=	trim( cbGetParam( $_POST, 'checkusername', '' ) );
@@ -931,13 +916,10 @@ function sendNewPass( $option ) {
 		if ($res) {
 			$_PLUGINS->trigger( 'onNewPassword', array($user_id,$newpass));
 
-			$cbUser		=	CBuser::getInstance( (int) $user_id );
-			$user		=	$cbUser->getUserData();
-			$newpass	=	$user->hashAndSaltPassword( $newpass );
-			$sql		=	"UPDATE #__users SET password = " . $_CB_database->Quote( $newpass ) . " WHERE id = " . (int) $user_id;
-			$_CB_database->setQuery( $sql );
-			if (!$_CB_database->query()) {
-				die("SQL error" . $_CB_database->stderr(true));
+			$user				=	CBuser::getUserDataInstance( (int) $user_id );
+			$user->password		=	$newpass;
+			if ( ! $user->storePassword() ) {
+				die("SQL error" . $user->getError());
 			}
 			cbRedirect( cbSef("index.php?option=$option&amp;task=done".($Itemid ? "&amp;Itemid=". (int) $Itemid : ""), false ), sprintf( _UE_NEWPASS_SENT, htmlspecialchars( $confirmEmail ) ) );
 		} else {
@@ -989,6 +971,7 @@ function saveRegistration( $option ) {
 	global $_CB_framework, $_CB_database, $ueConfig, $_POST, $_PLUGINS;
 
 	// simple spoof check security
+	checkCBPostIsHTTPS();
 	cbSpoofCheck( 'registerForm' );
 	cbRegAntiSpamCheck();
 
@@ -1231,6 +1214,8 @@ function performCheckEmail( $email, $function ) {
 function login( $username=null, $passwd2=null ) {
     global $_POST, $_CB_framework, $ueConfig;
 
+	checkCBPostIsHTTPS();
+
     if ( count( $_POST ) == 0 ) {
     	HTML_comprofiler::loginForm( 'com_comprofiler', $_POST, null );
     	return;
@@ -1445,7 +1430,7 @@ function reportUser($option,$form=1,$uid=0) {
 			echo _UE_FUNCTIONALITY_DISABLED;
 			exit();
 	}
-	if (!allowAccess( $ueConfig['allow_profileviewbyGID'],'RECURSE', userGID( $_CB_framework->myId() ))) {
+	if ( ! CBuser::getMyInstance()->authoriseView( 'profile', $uid ) ) {
 		echo _UE_NOT_AUTHORIZED;
 		return;
 	}
@@ -1911,6 +1896,45 @@ function processConnectionActions($connectionids) {
 							( is_array($connectionids) ) ? _UE_CONNECTIONACTIONSSUCCESSFULL : null );
 	}
 	return;
+}
+/**
+ * Checks if a page is executed https, and if not, if it should be according to login module HTTPS posts specifications
+ * 
+ * @param  boolean  $return  [default: false] : True: returns if https switchover is needed for the POST form (if not already on HTTPS and login module asks for it). False: errors 403 if not in https and it's configured in login module.
+ * @return boolean           True: switchover needed (returned only if $return = true)
+ */
+function checkCBPostIsHTTPS( $return = false ) {
+	global $_CB_framework, $_CB_database, $_SERVER;
+
+	$isHttps			=	( isset( $_SERVER['HTTPS'] ) && ( ! empty( $_SERVER['HTTPS'] ) ) && ( $_SERVER['HTTPS'] != 'off' ) );
+
+	if ( ( ! $isHttps ) && file_exists( $_CB_framework->getCfg( 'absolute_path' ) . '/modules/' . ( checkJversion() > 0 ? 'mod_cblogin/' : null ) . 'mod_cblogin.php' ) ) {
+		$query			=	'SELECT ' . $_CB_database->NameQuote( 'params' )
+						.	"\n FROM " . $_CB_database->NameQuote( '#__modules' )
+						.	"\n WHERE " . $_CB_database->NameQuote( 'module' ) . " = " . $_CB_database->Quote( 'mod_cblogin' )
+						.	"\n ORDER BY " . $_CB_database->NameQuote( 'ordering' );
+		$_CB_database->setQuery( $query, 0, 1 );
+		$module			=	$_CB_database->loadResult();
+
+		if ( $module ) {
+			$params		=	new cbParamsBase( $module );
+
+			$https_post	=	( $params->get( 'https_post', 0 ) != 0 );
+		} else {
+			$https_post	=	false;
+		}
+	} else {
+		$https_post		=	false;
+	}
+
+	if ( $return ) {
+		return $https_post;
+	} else {
+		if ( $https_post && ( ! $isHttps ) ) {
+			header( 'HTTP/1.0 403 Forbidden' );
+			exit( _UE_NOT_AUTHORIZED );
+		}
+	}
 }
 
 /* NxtLvl Mod */
