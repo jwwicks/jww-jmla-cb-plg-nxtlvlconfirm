@@ -12,7 +12,7 @@ Registration form displayed with extra NxtLvlWatchField
 - User submits form
 - Normal CB User email confirmation sent
 - User clicks email confirmation link
-- CB onAfterUserConfirm Event triggers NxtLvlConfirm plugin to email "NxtLvlEmailToUser" to confirm NxtLvlWatchField value, if entered
+- CB onAfterUserConfirm Event triggers NxtLvlConfirm plugin to email "NxtLvlEmailToUser"(Admin typically) to confirm NxtLvlWatchField value, if entered
 - "NxtLvlEmailToUser" clicks confirmation link which triggers NxtLvlConfirm which upgrades User Access level to NxtLvlOnConfirmedGroup
 - User able to view/download NxtLvlOnConfirmedGroup content
 
