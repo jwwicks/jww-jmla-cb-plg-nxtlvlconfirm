@@ -1,3 +1,35 @@
+# Section 1 - Description
+## 1.1 - Purpose
+ 
+ 
+## 1.2 - Usage and Scope
+
+
+## 1.3 - Definitions, Acronyms and Abbreviations
+Term | Description
+---- | -----------
+
+
+## 1.4 - References
+
+
+***  
+***    
+# Section 2 - NameHere  
+## 2.1 - Purpose
+  
+***  
+#### 2.2.1 - 
+##### 2.2.1.1 - Purpose
+
+##### 2.2.1.2 - Usage and Scope
+File | Location | Description
+-----| -------- | -----------
+
+##### 2.2.1.3 - Constraints
+##### 2.2.1.4 - Deployment
+##### 2.2.1.5 - Issues and Risks
+
 # Introduction
 This readme assumes you have a Joomla 1.5.x and Community Builder 1.2.x installation already setup. It also assumes you're familiar with editing PHP files. If you're shakey on the latter this process might not be best for you.
 
